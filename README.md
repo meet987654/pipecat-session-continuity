@@ -15,8 +15,6 @@ graph TD
     Storage -.-> SQLite[(SQLite)]
 ```
 
-### See it in action!
-![Session Continuity Demo](assets/demo.webp)
 
 ## Quickstart
 
