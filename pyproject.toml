@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pipecat-session-continuity"
-version = "0.2.0"
+version = "0.2.1"
 description = "A session continuity and context recovery library for Pipecat voice agents."
 readme = "pipecat_session_continuity/README.md"
 requires-python = ">=3.11"
 dependencies = [
     "redis>=4.0.0",
-    "pipecat-ai>=1.5.0",
+    "pipecat-ai>=1.5.0"
 ]
 
 [tool.setuptools]
-packages = ["pipecat_session_continuity"]
+packages = ["pipecat_session_continuity", "pipecat_session_continuity.storage"]
 include-package-data = false

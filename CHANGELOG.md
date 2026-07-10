@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-10
+### Fixed
+- 0.2.0 was missing the `storage` subpackage in the published wheel; fixed setuptools package discovery in `pyproject.toml`.
 ## [0.2.0] - 2026-07-10
 ### Added
 - **Storage Abstraction**: Added `BaseStorage` interface with `RedisStorage` and `SQLiteStorage` backends. SQLite is a zero-setup persistent option leveraging local files.
