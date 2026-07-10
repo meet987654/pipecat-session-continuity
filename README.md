@@ -1,6 +1,19 @@
 # pipecat-session-continuity
 
+[![CI](https://github.com/meet987654/pipecat-session-continuity/actions/workflows/test.yml/badge.svg)](https://github.com/meet987654/pipecat-session-continuity/actions/workflows/test.yml)
+
 A lightweight, drop-in library to add connection-resilience and state idempotency to Pipecat 1.5 voice agents.
+
+## Architecture
+
+```mermaid
+graph TD
+    Client[Client] <--> Transport[Pipecat Transport]
+    Transport -->|on_client_connected / on_turn_ended| Continuity[SessionContinuity]
+    Continuity <-->|save / load| Storage[Storage Backend]
+    Storage -.-> Redis[(Redis)]
+    Storage -.-> SQLite[(SQLite)]
+```
 
 ## Quickstart
 

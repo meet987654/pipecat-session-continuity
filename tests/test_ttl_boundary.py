@@ -10,7 +10,8 @@ import pytest
 @pytest.mark.asyncio
 async def test_ttl_boundary():
     # Force a very short TTL
-    manager = SessionContinuityManager(ttl_seconds=1)
+    redis_url = os.getenv("REDIS_URL", "redis://invalid-host-so-it-falls-back:6379")
+    manager = SessionContinuityManager(redis_url=redis_url, ttl_seconds=1)
     session_id = "test_ttl_123"
     
     messages = [{"role": "user", "content": "Hello TTL!"}]

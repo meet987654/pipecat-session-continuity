@@ -13,7 +13,8 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_idempotency():
-    manager = SessionContinuityManager()
+    redis_url = os.getenv("REDIS_URL", "redis://invalid-host-so-it-falls-back:6379")
+    manager = SessionContinuityManager(redis_url=redis_url, ttl_seconds=60)
     session_id = "test_idempotency_real_race"
     
     session_pending_tool_calls = {}
