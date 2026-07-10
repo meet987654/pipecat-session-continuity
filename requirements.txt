@@ -1,0 +1,3 @@
+pipecat-ai[webrtc,groq,deepgram]
+redis
+python-dotenv

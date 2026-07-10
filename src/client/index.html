@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Agent Continuity Demo</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 50px; background-color: #121212; color: #ffffff; }
+        .controls { margin-top: 20px; display: flex; gap: 15px; }
+        button { padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; transition: 0.2s; }
+        #connect-btn { background-color: #4CAF50; color: white; }
+        #connect-btn:disabled { background-color: #2E7D32; opacity: 0.5; cursor: not-allowed; }
+        #disconnect-btn { background-color: #f44336; color: white; }
+        #disconnect-btn:disabled { background-color: #b71c1c; opacity: 0.5; cursor: not-allowed; }
+        #end-call-btn { background-color: #ff9800; color: white; }
+        #end-call-btn:disabled { background-color: #e65100; opacity: 0.5; cursor: not-allowed; }
+        #status { margin-top: 20px; font-weight: bold; font-size: 18px; }
+        .session-box { background: #1e1e1e; padding: 15px 30px; border-radius: 10px; margin-bottom: 20px; }
+        #log { margin-top: 20px; max-height: 200px; overflow-y: auto; background: #1e1e1e; padding: 10px; border-radius: 8px; width: 500px; font-size: 12px; font-family: monospace; color: #aaa; }
+    </style>
+</head>
+<body>
+    <h1>Pipecat Session Continuity</h1>
+    
+    <div class="session-box">
+        <p style="margin:0;">Session ID: <span id="session-id" style="color:#4CAF50; font-family:monospace; font-size:1.1em;"></span></p>
+    </div>
+    
+    <div class="controls">
+        <button id="connect-btn">Connect & Speak</button>
+        <button id="end-call-btn" disabled>End Call (Clean Disconnect)</button>
+        <button id="disconnect-btn" disabled>Simulate Drop (Kill Connection)</button>
+    </div>
+
+    <div id="status">Disconnected</div>
+    <div id="log"></div>
+
+    <script>
+        let sessionId = localStorage.getItem("pipecat_session_id");
+        let sessionSignature = localStorage.getItem("pipecat_session_signature");
+        
+        let reconnectAttempt = 0;
+        const maxBackoffMs = 10000;
+        const ttlWindowMs = 3600 * 1000;
+        let userInitiatedDisconnect = false;
+
+        async function initSession() {
+            if (!sessionId || !sessionSignature) {
+                try {
+                    const res = await fetch("/create_session", { method: "POST" });
+                    const data = await res.json();
+                    sessionId = data.session_id;
+                    sessionSignature = data.signature;
+                    localStorage.setItem("pipecat_session_id", sessionId);
+                    localStorage.setItem("pipecat_session_signature", sessionSignature);
+                    localStorage.setItem("pipecat_session_start", Date.now().toString());
+                } catch (e) {
+                    console.error("Failed to initialize secure session", e);
+                }
+            }
+            document.getElementById("session-id").innerText = sessionId;
+        }
+        initSession();
+
+        let ws;
+        let audioContext;
+        let mediaStream;
+        let sourceNode;
+        let workletNode;
+
+        const connectBtn = document.getElementById("connect-btn");
+        const disconnectBtn = document.getElementById("disconnect-btn");
+        const endCallBtn = document.getElementById("end-call-btn");
+        const statusEl = document.getElementById("status");
+        const logEl = document.getElementById("log");
+
+        function log(msg) {
+            const line = document.createElement("div");
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logEl.appendChild(line);
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(msg);
+        }
+
+        // --- Audio Playback Queue ---
+        // We queue incoming raw PCM chunks and play them back seamlessly
+        let playbackSampleRate = 16000;
+        let playbackCtx = null;
+        let nextPlayTime = 0;
+
+        function ensurePlaybackCtx() {
+            if (!playbackCtx) {
+                playbackCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: playbackSampleRate });
+                nextPlayTime = 0;
+            }
+        }
+
+        function playPCMChunk(pcmInt16ArrayBuffer) {
+            ensurePlaybackCtx();
+            const int16 = new Int16Array(pcmInt16ArrayBuffer);
+            const float32 = new Float32Array(int16.length);
+            for (let i = 0; i < int16.length; i++) {
+                float32[i] = int16[i] / 32768.0;
+            }
+
+            const buffer = playbackCtx.createBuffer(1, float32.length, playbackSampleRate);
+            buffer.getChannelData(0).set(float32);
+
+            const source = playbackCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(playbackCtx.destination);
+
+            const now = playbackCtx.currentTime;
+            if (nextPlayTime < now) {
+                nextPlayTime = now;
+            }
+            source.start(nextPlayTime);
+            nextPlayTime += buffer.duration;
+        }
+
+        // --- Microphone Capture via AudioWorklet ---
+        const workletCode = `
+            class PCMCaptureProcessor extends AudioWorkletProcessor {
+                process(inputs) {
+                    const input = inputs[0];
+                    if (input && input.length > 0) {
+                        const float32 = input[0];
+                        const int16 = new Int16Array(float32.length);
+                        for (let i = 0; i < float32.length; i++) {
+                            int16[i] = Math.max(-1, Math.min(1, float32[i])) * 0x7FFF;
+                        }
+                        this.port.postMessage(int16.buffer, [int16.buffer]);
+                    }
+                    return true;
+                }
+            }
+            registerProcessor('pcm-capture', PCMCaptureProcessor);
+        `;
+
+        connectBtn.addEventListener("click", async () => {
+            userInitiatedDisconnect = false;
+            
+            // Re-check just in case we expired and cleared it
+            if (!localStorage.getItem("pipecat_session_id")) {
+                sessionId = null;
+                sessionSignature = null;
+                await initSession();
+            }
+
+            if (!mediaStream) {
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                } catch (err) {
+                    alert("Microphone access denied or error: " + err);
+                    return;
+                }
+            }
+            
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const isReconnect = reconnectAttempt > 0 ? "&reconnect=true" : "";
+            const wsUrl = `${protocol}//${window.location.host}/ws?session_id=${sessionId}&signature=${sessionSignature}${isReconnect}`;
+            ws = new WebSocket(wsUrl);
+            ws.binaryType = "arraybuffer";
+
+            ws.onopen = async () => {
+                reconnectAttempt = 0; // Reset backoff on success
+                statusEl.innerText = "Connected";
+                statusEl.style.color = "#4CAF50";
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                endCallBtn.disabled = false;
+                log("WebSocket connected");
+
+                // Set up mic capture at 16kHz
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                sourceNode = audioContext.createMediaStreamSource(mediaStream);
+
+                // Use AudioWorklet (modern) with ScriptProcessor fallback
+                try {
+                    const blob = new Blob([workletCode], { type: 'application/javascript' });
+                    const url = URL.createObjectURL(blob);
+                    await audioContext.audioWorklet.addModule(url);
+                    URL.revokeObjectURL(url);
+
+                    workletNode = new AudioWorkletNode(audioContext, 'pcm-capture');
+                    workletNode.port.onmessage = (e) => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(e.data);
+                        }
+                    };
+                    sourceNode.connect(workletNode);
+                    workletNode.connect(audioContext.destination);
+                    log("Mic capture started (AudioWorklet)");
+                } catch (workletErr) {
+                    // Fallback to ScriptProcessor for older browsers
+                    log("AudioWorklet failed, using ScriptProcessor fallback");
+                    const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+                    scriptProcessor.onaudioprocess = (e) => {
+                        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        const pcmData = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
+                        }
+                        ws.send(pcmData.buffer);
+                    };
+                    sourceNode.connect(scriptProcessor);
+                    scriptProcessor.connect(audioContext.destination);
+                    log("Mic capture started (ScriptProcessor fallback)");
+                }
+            };
+
+            ws.onmessage = (event) => {
+                if (event.data instanceof ArrayBuffer && event.data.byteLength > 0) {
+                    playPCMChunk(event.data);
+                } else if (typeof event.data === 'string') {
+                    log("Server text: " + event.data);
+                }
+            };
+
+            ws.onclose = (event) => {
+                let cleanClose = false;
+                if (event.reason === "Clean Disconnect") {
+                    localStorage.removeItem("pipecat_session_id");
+                    localStorage.removeItem("pipecat_session_signature");
+                    localStorage.removeItem("pipecat_session_start");
+                    statusEl.innerText = "Disconnected (Clean). Refresh for new call.";
+                    cleanClose = true;
+                } else if (userInitiatedDisconnect) {
+                    statusEl.innerText = "Simulated Drop — Click Connect to resume";
+                    statusEl.style.color = "#ff9800";
+                    cleanClose = true;
+                } else {
+                    statusEl.innerText = `Disconnected (Unexpected Drop - Code ${event.code})`;
+                    statusEl.style.color = "#f44336";
+                }
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                endCallBtn.disabled = true;
+                cleanupAudio(!cleanClose);
+                log("WebSocket closed");
+
+                if (!cleanClose) {
+                    handleAutoReconnect();
+                }
+            };
+
+            ws.onerror = (err) => {
+                log("WebSocket error");
+                console.error("WebSocket error:", err);
+            };
+        });
+
+        disconnectBtn.addEventListener("click", () => {
+            if (ws) {
+                userInitiatedDisconnect = true;
+                // Simulate a drop without sending a clean close frame if possible, 
+                // but standard WebSocket API only gives us close().
+                ws.close();
+                log("Simulated disconnect");
+            }
+        });
+
+        endCallBtn.addEventListener("click", () => {
+            if (ws) {
+                userInitiatedDisconnect = true;
+                ws.close(1000, "Clean Disconnect");
+                statusEl.innerText = "Call Ended Normally (Refresh for new session)";
+                statusEl.style.color = "#4CAF50";
+                log("Ended call cleanly");
+            }
+        });
+
+        function handleAutoReconnect() {
+            const startStr = localStorage.getItem("pipecat_session_start");
+            const startTime = startStr ? parseInt(startStr) : Date.now();
+            const elapsed = Date.now() - startTime;
+            
+            if (elapsed > ttlWindowMs) {
+                statusEl.innerText = "Session expired, starting fresh";
+                statusEl.style.color = "#f44336";
+                localStorage.removeItem("pipecat_session_id");
+                localStorage.removeItem("pipecat_session_signature");
+                localStorage.removeItem("pipecat_session_start");
+                sessionId = null;
+                sessionSignature = null;
+                initSession(); // generate a new one
+                return;
+            }
+            
+            reconnectAttempt++;
+            let backoff = Math.pow(2, reconnectAttempt - 1) * 1000;
+            if (backoff > maxBackoffMs) backoff = maxBackoffMs;
+
+            statusEl.innerText = `Connection lost, reconnecting... (attempt ${reconnectAttempt})`;
+            statusEl.style.color = "#ff9800";
+            log(`Scheduling reconnect attempt ${reconnectAttempt} in ${backoff}ms`);
+            
+            setTimeout(() => {
+                if (!userInitiatedDisconnect && (!ws || ws.readyState === WebSocket.CLOSED)) {
+                    connectBtn.click();
+                }
+            }, backoff);
+        }
+
+        function cleanupAudio(keepMic = false) {
+            if (workletNode) { workletNode.disconnect(); workletNode = null; }
+            if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
+            if (audioContext) { audioContext.close(); audioContext = null; }
+            if (!keepMic && mediaStream) { 
+                mediaStream.getTracks().forEach(track => track.stop()); 
+                mediaStream = null; 
+            }
+            // Reset playback
+            if (playbackCtx) { playbackCtx.close(); playbackCtx = null; }
+            nextPlayTime = 0;
+        }
+    </script>
+</body>
+</html>

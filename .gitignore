@@ -1,0 +1,10 @@
+.env
+.venv/
+dist/
+build/
+*.egg-info/
+src/logs/
+test_project/
+test-install-*/
+__pycache__/
+*.pyc

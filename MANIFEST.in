@@ -1,0 +1,6 @@
+prune .venv
+prune test_project
+prune dist
+prune build
+prune *.egg-info
+global-exclude *.pyc
