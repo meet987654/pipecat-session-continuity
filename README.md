@@ -16,7 +16,7 @@ graph TD
 ```
 
 ### See it in action!
-![Session Continuity Demo](/C:/Users/meetp/.gemini/antigravity-ide/brain/58c40ffa-85d2-4138-8dc7-ef536c3e44d7/continuity_demo_1783689492308.webp)
+![Session Continuity Demo](assets/demo.webp)
 
 ## Quickstart
 
