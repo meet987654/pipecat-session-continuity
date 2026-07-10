@@ -1,59 +1,47 @@
 import json
-import redis
-import os
+import time
+import asyncio
 import logging
 from typing import List, Dict, Any, Optional
+
+from .storage.base import BaseStorage
 
 logger = logging.getLogger(__name__)
 
 class SessionContinuityManager:
-    # Class-level dictionary for in-memory fallback across instances
-    _memory_fallback: Dict[str, Any] = {}
-
-    def __init__(self, redis_url: str = None, ttl_seconds: int = 3600):
-        if not redis_url:
-            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+    def __init__(self, storage_backend: Optional[BaseStorage] = None, redis_url: str = None, ttl_seconds: int = 3600):
         self.ttl_seconds = ttl_seconds
-        self.use_memory = False
         self.checkpoint_times = []
         
-        try:
-            self.redis_client = redis.Redis.from_url(redis_url, decode_responses=True, socket_connect_timeout=2)
-            self.redis_client.ping()
-            logger.info(f"Connected to Redis at {redis_url} for session continuity.")
-        except Exception as e:
-            logger.warning(f"Failed to connect to Redis: {e}")
-            print("\n" + "="*80)
-            print("🛑 WARNING: REDIS CONNECTION FAILED! 🛑")
-            print("SessionContinuityManager is falling back to an IN-MEMORY dictionary.")
-            print("Sessions will NOT persist across server restarts!")
-            print("="*80 + "\n")
-            self.use_memory = True
+        if storage_backend:
+            self.storage = storage_backend
+        else:
+            from .storage.redis_storage import RedisStorage
+            # Default to RedisStorage for backward compatibility
+            url = redis_url or "redis://localhost:6379"
+            self.storage = RedisStorage(redis_url=url)
 
     def _get_key(self, session_id: str) -> str:
         return f"pipecat:session:{session_id}"
 
     async def save_context(self, session_id: str, messages: List[Dict[str, Any]], pending_tool_calls: Dict[str, Dict[str, Any]] = None):
         """
-        Snapshots the conversation history and tool state to Redis under the given session_id.
+        Snapshots the conversation history and tool state to the storage backend under the given session_id.
         """
         if not session_id:
             logger.warning("No session_id provided, skipping context save.")
             return
 
-        import time
         start_time = time.time()
         key = self._get_key(session_id)
         try:
             data = json.dumps({
                 "messages": messages,
-                "pending_tool_calls": pending_tool_calls or {}
+                "pending_tool_calls": pending_tool_calls or {},
+                "updated_at": time.time()
             })
-            if self.use_memory:
-                self._memory_fallback[key] = data
-            else:
-                import asyncio
-                await asyncio.to_thread(self.redis_client.setex, key, self.ttl_seconds, data)
+            
+            await self.storage.save(key, data, self.ttl_seconds)
             
             elapsed_ms = (time.time() - start_time) * 1000
             self.checkpoint_times.append(elapsed_ms)
@@ -71,14 +59,16 @@ class SessionContinuityManager:
 
         key = self._get_key(session_id)
         try:
-            if self.use_memory:
-                data = self._memory_fallback.get(key)
-            else:
-                import asyncio
-                data = await asyncio.to_thread(self.redis_client.get, key)
+            data = await self.storage.load(key)
                 
             if data:
                 parsed = json.loads(data)
+                
+                # Compute time away
+                updated_at = parsed.get("updated_at", time.time())
+                time_away_seconds = time.time() - updated_at
+                parsed["time_away_seconds"] = time_away_seconds
+                
                 logger.info(f"Context restored for session {session_id}.")
                 return parsed
             else:
@@ -90,15 +80,11 @@ class SessionContinuityManager:
 
     async def clear_context(self, session_id: str):
         """
-        Clears the session from Redis (useful on deliberate end of call).
+        Clears the session from storage (useful on deliberate end of call).
         """
         key = self._get_key(session_id)
         try:
-            if self.use_memory:
-                self._memory_fallback.pop(key, None)
-            else:
-                import asyncio
-                await asyncio.to_thread(self.redis_client.delete, key)
+            await self.storage.delete(key)
             logger.info(f"Context cleared for session {session_id}.")
         except Exception as e:
             logger.error(f"Error clearing context for session {session_id}: {e}")

@@ -32,7 +32,7 @@ async def test_idempotency():
             elif entry["status"] == "completed":
                 return f"This was already done: {entry['result']}"
         
-        session_pending_tool_calls[call_id] = {"status": "pending", "result": None}
+        session_pending_tool_calls[call_id] = {"status": "pending", "result": None, "tool_name": "book_appointment"}
         await manager.save_context(session_id, [], session_pending_tool_calls)
         
         mock_appointment_counter += 1
@@ -40,7 +40,7 @@ async def test_idempotency():
         await asyncio.sleep(0.5)
         
         result_str = f"Appointment booked! ID: apt_{mock_appointment_counter}"
-        session_pending_tool_calls[call_id] = {"status": "completed", "result": result_str}
+        session_pending_tool_calls[call_id] = {"status": "completed", "result": result_str, "tool_name": "book_appointment"}
         await manager.save_context(session_id, [], session_pending_tool_calls)
         
         return result_str

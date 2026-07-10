@@ -34,9 +34,10 @@ async def test_ttl_boundary():
     # Depending on whether Redis is used or memory fallback, 
     # memory fallback doesn't auto-expire without custom logic.
     # The requirement is just to assert the TTL boundary is tested.
-    if not manager.use_memory:
+    use_memory = getattr(manager.storage, "use_memory", False)
+    if not use_memory:
         assert res2 is None
-        print("Context expired successfully via Redis TTL.")
+        print("Context expired successfully via TTL.")
     else:
         print("Running in memory fallback mode, TTL logic is skipped for memory fallback.")
         

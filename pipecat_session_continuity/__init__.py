@@ -1,14 +1,20 @@
 from .manager import SessionContinuityManager
 from .security import generate_session_token, verify_session_token
+from .storage.base import BaseStorage
+from .storage.redis_storage import RedisStorage
+from .storage.sqlite_storage import SQLiteStorage
 from pipecat.frames.frames import LLMMessagesAppendFrame
 import logging
+
+__all__ = ["SessionContinuityManager", "BaseStorage", "RedisStorage", "SQLiteStorage"]
 
 logger = logging.getLogger(__name__)
 
 class SessionContinuity:
-    def __init__(self, redis_url=None, ttl_seconds=3600, secret=None):
-        self.manager = SessionContinuityManager(redis_url, ttl_seconds)
+    def __init__(self, storage_backend=None, redis_url=None, ttl_seconds=3600, secret=None, stale_threshold_minutes=30):
+        self.manager = SessionContinuityManager(storage_backend, redis_url, ttl_seconds)
         self.secret = secret
+        self.stale_threshold_minutes = stale_threshold_minutes
 
     async def resume_or_start(self, task, context, session_id) -> tuple[bool, dict]:
         """
@@ -23,16 +29,34 @@ class SessionContinuity:
             context.set_messages(restored_context["messages"])
             pending_tool_calls = restored_context.get("pending_tool_calls", {})
             is_resumed = True
+            time_away_seconds = restored_context.get("time_away_seconds", 0)
             logger.info(f"Resuming session {session_id} with {len(context.get_messages())} messages and {len(pending_tool_calls)} pending tools.")
+            
+            # Tool call hallucination mitigation
+            for call_id, tool_data in pending_tool_calls.items():
+                if tool_data.get("status") == "pending" and "tool_name" in tool_data:
+                    tool_name = tool_data["tool_name"]
+                    sys_msg = {
+                        "role": "system",
+                        "content": f"[System Notice: The connection dropped while executing the tool '{tool_name}'. Do NOT call this tool again for the same request. Inform the user you are resuming the previous task and ask them to confirm before proceeding.]"
+                    }
+                    context.add_message(sys_msg)
+
         else:
             logger.info(f"Starting fresh session for {session_id}")
 
         # Inject the appropriate system message
         if is_resumed:
-            msg = {
-                "role": "user",
-                "content": "[System Notice: The connection dropped and was just restored. Please briefly acknowledge this to the user and ask how you can continue helping.]"
-            }
+            if time_away_seconds > self.stale_threshold_minutes * 60:
+                msg = {
+                    "role": "user",
+                    "content": "[System Notice: The user was disconnected for a while and just reconnected. Welcome them back, acknowledge it's been a bit, and ask if they'd like to pick up where you left off.]"
+                }
+            else:
+                msg = {
+                    "role": "user",
+                    "content": "[System Notice: The connection dropped and was just restored. Please briefly acknowledge this to the user and ask how you can continue helping.]"
+                }
         else:
             msg = {
                 "role": "user",
