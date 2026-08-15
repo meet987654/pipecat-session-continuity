@@ -6,12 +6,28 @@ build-backend = "setuptools.build_meta"
 name = "pipecat-session-continuity"
 version = "0.2.1"
 description = "A session continuity and context recovery library for Pipecat voice agents."
-readme = "pipecat_session_continuity/README.md"
+readme = "README.md"
 requires-python = ">=3.11"
+keywords = ["pipecat", "voice", "ai", "agents", "llm", "webrtc", "session", "continuity"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Telephony",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
 dependencies = [
     "redis>=4.0.0",
     "pipecat-ai>=1.5.0"
 ]
+
+[project.urls]
+Homepage = "https://github.com/meet987654/pipecat-session-continuity"
+Repository = "https://github.com/meet987654/pipecat-session-continuity"
+Issues = "https://github.com/meet987654/pipecat-session-continuity/issues"
 
 [tool.setuptools]
 packages = ["pipecat_session_continuity", "pipecat_session_continuity.storage"]
