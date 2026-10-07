@@ -44,8 +44,14 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, signature: s
 
 Before using this library in production, please be aware of the following architectural constraints:
 
-### 1. `tool_call_id` Idempotency Vulnerability
-The idempotency logic is currently keyed strictly to the LLM-generated `tool_call_id`. While this successfully blocks literal replay of the same function call across a reconnect, it does **NOT** prevent the LLM from hallucinating a brand new `tool_call_id` for the exact same logical action after the context is restored. In production, idempotency tokens should be passed by the client or generated deterministically based on action parameters, not blindly trusted from the LLM.
+### 1. Deterministic Tool-Call Idempotency & Client Tokens
+Earlier versions keyed idempotency strictly to the LLM-generated `tool_call_id`, which was vulnerable to the LLM generating a brand new ID for the same logical action on reconnect (#1). 
+
+`pipecat-session-continuity` now solves this with **deterministic idempotency keys**:
+- Keys are derived from `tool_name` + canonical SHA-256 hash of sorted arguments (`idemp:det:{tool}:{args_hash}`).
+- Optional `client_token` support binds actions directly to client-supplied tokens (`idemp:token:{tool}:{token}`).
+- The `IdempotencyRegistry` supports dual lookup (by deterministic key or legacy `tool_call_id`), and `SessionContinuity.resume_or_start()` injects rich contextual system notices containing arguments and strict non-replay directives.
+- *Best practice*: If your tool takes dynamic arguments like "current timestamp", pass a client-side idempotency token or normalize the parameters before checking idempotency.
 
 ### 2. In-Session Duplicate Delivery (At-Least-Once Delivery)
 Checkpoints happen sequentially at the end of each turn. If a server dies *while* the TTS audio is streaming to the user but *before* the checkpoint runs, the LLM state is rolled back to the previous turn. Upon reconnect, the LLM will re-generate the answer. This is an inherent trait of optimistic, asynchronous checkpointing (At-Least-Once delivery).

@@ -116,10 +116,16 @@ async def run_bot(websocket_client, session_id: str, is_reconnect: bool = False)
         # a genuine intentional retry (new tool_call_id) from a resumed duplicate of the same call.
         try:
             call_id = params.tool_call_id
+            args = {"details": details}
             logger.debug(f"[book_appointment] Started for call_id: {call_id} with details: {details}")
             
-            entry = session_pending_tool_calls.get(call_id)
-            if entry:
+            is_dup, entry = continuity.check_tool_idempotency(
+                pending_tool_calls=session_pending_tool_calls,
+                tool_name="book_appointment",
+                arguments=args,
+                tool_call_id=call_id,
+            )
+            if is_dup and entry:
                 if entry["status"] == "pending" and is_resumed:
                     logger.debug(f"[book_appointment] Returning SYSTEM_NOTE for pending resumed call {call_id}")
                     result = "SYSTEM_NOTE: The previous attempt to book this appointment was interrupted by a connection drop. The outcome is unknown. Please ask the user if they received a confirmation before retrying."
@@ -133,7 +139,13 @@ async def run_bot(websocket_client, session_id: str, is_reconnect: bool = False)
                     return result
             
             # Missing -> Proceed
-            session_pending_tool_calls[call_id] = {"status": "pending", "result": None}
+            continuity.record_tool_call(
+                pending_tool_calls=session_pending_tool_calls,
+                tool_name="book_appointment",
+                arguments=args,
+                tool_call_id=call_id,
+                status="pending",
+            )
             logger.debug(f"[book_appointment] Saving pending state for {call_id}...")
             await continuity.checkpoint(context, session_id, session_pending_tool_calls)
             logger.debug(f"[book_appointment] Saved pending state for {call_id}.")
@@ -143,7 +155,11 @@ async def run_bot(websocket_client, session_id: str, is_reconnect: bool = False)
             
             result_str = f"Appointment booked! ID: apt_{mock_appointment_counter}"
             
-            session_pending_tool_calls[call_id] = {"status": "completed", "result": result_str}
+            continuity.complete_tool_call(
+                pending_tool_calls=session_pending_tool_calls,
+                key_or_call_id=call_id,
+                result=result_str,
+            )
             logger.debug(f"[book_appointment] Saving completed state for {call_id}...")
             await continuity.checkpoint(context, session_id, session_pending_tool_calls)
             logger.debug(f"[book_appointment] Saved completed state for {call_id}.")

@@ -12,10 +12,11 @@ When a client disconnects (network drop, browser refresh, mobile backgrounding),
 ---
 
 ## Features
-- Checkpoint LLM context + pending tool calls to Redis (SQLite support planned)
+- Checkpoint LLM context + pending tool calls to Redis and SQLite
 - Secure session tokens with HMAC signature (prevents session forgery)
 - Resume conversation state on client reconnect
-- Idempotent tool-call handling (reduces duplicate actions after recovery)
+- **Robust tool-call idempotency**: Deterministic keys (tool_name + canonical arguments hash), client-side tokens, and dual-index lookup to prevent duplicate actions even if LLM generates new `tool_call_id`s on reconnect
+- Stronger contextual system prompts injected on resume for pending and completed tools
 - Simple drop-in API designed for Pipecat event handlers
 - Explicitly documented limitations (production-ready honesty)
 
@@ -40,6 +41,35 @@ async def on_client_connected(transport, client):
     
     if is_resumed:
         print(f"Welcome back! Restored {len(context.messages)} messages.")
+
+# Inside your tool execution handler:
+async def my_tool(params, **kwargs):
+    call_id = params.tool_call_id
+    
+    # 1. Deterministic check (identifies duplicates even if LLM generated a new tool_call_id)
+    is_dup, entry = continuity.check_tool_idempotency(
+        pending_tool_calls=pending_tools,
+        tool_name="my_tool",
+        arguments=kwargs,
+        tool_call_id=call_id,
+    )
+    if is_dup and entry:
+        if entry["status"] == "completed":
+            return f"Already completed: {entry['result']}"
+        elif entry["status"] == "pending":
+            return "Interrupted during prior attempt; please confirm before retrying."
+
+    # 2. Record pending state
+    continuity.record_tool_call(pending_tools, "my_tool", arguments=kwargs, tool_call_id=call_id)
+    await continuity.checkpoint(context, session_id, pending_tools)
+
+    # 3. Execute action
+    result = await execute_action(**kwargs)
+
+    # 4. Mark complete
+    continuity.complete_tool_call(pending_tools, call_id, result=result)
+    await continuity.checkpoint(context, session_id, pending_tools)
+    return result
 
 # Hook into the pipeline to securely save state when the LLM finishes speaking
 turn_observer = task.turn_tracking_observer
@@ -66,13 +96,12 @@ For full installation details, API documentation, and configuration options, see
 ## Current Limitations
 This library currently has a few intentional boundaries:
 - It only persists the `LLMContext` (messages array) and pending tool calls. It does not attempt to serialize the state of other pipeline processors (like VAD state or STT buffers).
-- It relies entirely on Redis for the store.
-- **Tool-Call Re-initiation gap**: Idempotency is keyed strictly on Pipecat's `tool_call_id`. After a session resumes, the LLM has no reason to reuse that specific ID for interrupted work, and will often generate a brand-new tool call with a new ID for the exact same logical action. **Mitigation**: This library intercepts pending tools and injects an explicit system message (`"Do NOT call this tool again for the same request..."`) pointing to the specific tool name. *Note: This is a robust mitigation that drastically reduces duplicate actions, but it is NOT a hard guarantee, as the LLM can still technically ignore the system instruction.*
+- While deterministic tool keys and system prompt injection prevent duplicate tool execution at the agent boundary, non-deterministic arguments (e.g. dynamic current timestamps generated inside LLM argument JSON) may generate distinct hashes unless a client-side idempotency token is supplied.
 
 ## Roadmap / Planned Features
-- [ ] Better tool-call idempotency (deterministic IDs based on arguments)
+- [x] Better tool-call idempotency (deterministic IDs based on tool + arguments & client tokens - #1)
+- [x] SQLite backend for local/dev
 - [ ] Full pipeline state serialization (optional)
-- [ ] SQLite backend as default for local/dev
 - [ ] Prometheus / OpenTelemetry metrics export
 - [ ] Support for Pipecat Cloud session API
 - [ ] Multi-worker / distributed Redis locking
