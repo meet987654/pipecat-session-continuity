@@ -8,3 +8,4 @@ test_project/
 test-install-*/
 __pycache__/
 *.pyc
+*.db

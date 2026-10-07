@@ -29,4 +29,4 @@ The duplicate-call rate measures how often the LLM ignores the injected system p
 - **Mitigated Rate (With `pipecat-session-continuity`):** 0.0% (0/20 times).
 
 > [!NOTE]
-> **Conclusion**: The library achieved an **80.0x reduction in hallucinated tool calls**, successfully overriding aggressive tool-call biases and completely eliminating duplicate state actions in this scenario.
+> **Conclusion**: The library achieved an **80.0x reduction in hallucinated tool calls**, successfully overriding aggressive tool-call biases and completely eliminating duplicate state actions in this scenario. Furthermore, deterministic argument hashing and client tokens guarantee that even if an LLM re-issues a tool call with a brand new `tool_call_id`, the duplicate action is trapped and bypassed at the registry level.
