@@ -241,12 +241,38 @@ class IdempotencyRegistry:
             return self._call_id_to_key[key_or_call_id]
         return None
 
+    def __getitem__(self, key: str) -> Dict[str, Any]:
+        rec = self.get_record(key)
+        if rec is not None:
+            return rec
+        raise KeyError(key)
+
+    def __contains__(self, key: object) -> bool:
+        if not isinstance(key, str):
+            return False
+        return self._resolve_key(key) is not None
+
+    def get(self, key: str, default: Any = None) -> Any:
+        rec = self.get_record(key)
+        return rec if rec is not None else default
+
     def to_dict(self) -> Dict[str, Dict[str, Any]]:
         """Returns the serialized records dictionary for saving in context snapshot."""
-        return self.records
+        out = dict(self.records)
+        for call_id, idemp_key in self._call_id_to_key.items():
+            if call_id and call_id not in out and idemp_key in self.records:
+                out[call_id] = self.records[idemp_key]
+        return out
 
     def __len__(self) -> int:
         return len(self.records)
 
     def items(self):
-        return self.records.items()
+        return self.to_dict().items()
+
+    def keys(self):
+        return self.to_dict().keys()
+
+    def values(self):
+        return self.to_dict().values()
+
