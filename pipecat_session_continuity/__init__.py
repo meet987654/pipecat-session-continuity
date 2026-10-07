@@ -3,10 +3,24 @@ from .security import generate_session_token, verify_session_token
 from .storage.base import BaseStorage
 from .storage.redis_storage import RedisStorage
 from .storage.sqlite_storage import SQLiteStorage
+from .idempotency import (
+    IdempotencyRegistry,
+    generate_idempotency_key,
+    canonicalize_arguments,
+)
 from pipecat.frames.frames import LLMMessagesAppendFrame
 import logging
 
-__all__ = ["SessionContinuityManager", "BaseStorage", "RedisStorage", "SQLiteStorage"]
+__all__ = [
+    "SessionContinuity",
+    "SessionContinuityManager",
+    "BaseStorage",
+    "RedisStorage",
+    "SQLiteStorage",
+    "IdempotencyRegistry",
+    "generate_idempotency_key",
+    "canonicalize_arguments",
+]
 
 logger = logging.getLogger(__name__)
 
