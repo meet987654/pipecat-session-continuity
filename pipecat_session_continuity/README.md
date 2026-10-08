@@ -10,8 +10,11 @@ It snapshots your LLM's conversation history to Redis and securely restores it i
 ```python
 from pipecat_session_continuity import SessionContinuity
 
-# 1. Initialize
-continuity = SessionContinuity(redis_url="redis://localhost:6379", ttl_seconds=3600)
+# 1. Initialize (defaults to SQLite for zero-config local dev)
+continuity = SessionContinuity()
+
+# Or configure Redis for production:
+# continuity = SessionContinuity(redis_url="redis://localhost:6379", ttl_seconds=3600)
 
 @app.post("/create_session")
 async def create_session():
