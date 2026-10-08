@@ -12,7 +12,8 @@ When a client disconnects (network drop, browser refresh, mobile backgrounding),
 ---
 
 ## Features
-- Checkpoint LLM context + pending tool calls to Redis and SQLite
+- **Default SQLite storage**: Zero-config local development out of the box (persists to `pipecat_sessions.db` with no Redis or Docker needed)
+- **Production Redis storage**: Seamless scale-out via `redis_url` or custom storage backends
 - Secure session tokens with HMAC signature (prevents session forgery)
 - Resume conversation state on client reconnect
 - **Robust tool-call idempotency**: Deterministic keys (tool_name + canonical arguments hash), client-side tokens, and dual-index lookup to prevent duplicate actions even if LLM generates new `tool_call_id`s on reconnect
@@ -32,7 +33,14 @@ uv add pipecat-session-continuity
 ```python
 from pipecat_session_continuity import SessionContinuity
 
-continuity = SessionContinuity()  # Defaults to localhost:6379 Redis
+# Zero-config: defaults to local SQLiteStorage ("pipecat_sessions.db")
+continuity = SessionContinuity()
+
+# Or specify a custom SQLite db path:
+# continuity = SessionContinuity(db_path="my_sessions.db")
+
+# Or connect to Redis for distributed multi-worker production:
+# continuity = SessionContinuity(redis_url="redis://localhost:6379")
 
 @transport.event_handler("on_client_connected")
 async def on_client_connected(transport, client):
@@ -100,7 +108,7 @@ This library currently has a few intentional boundaries:
 
 ## Roadmap / Planned Features
 - [x] Better tool-call idempotency (deterministic IDs based on tool + arguments & client tokens - #1)
-- [x] SQLite backend for local/dev
+- [x] SQLite backend as default for local/dev (#2)
 - [ ] Full pipeline state serialization (optional)
 - [ ] Prometheus / OpenTelemetry metrics export
 - [ ] Support for Pipecat Cloud session API

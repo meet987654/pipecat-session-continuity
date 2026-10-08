@@ -23,7 +23,6 @@ from pipecat.transports.websocket.fastapi import (
 )
 
 from pipecat_session_continuity import SessionContinuity
-from pipecat_session_continuity.storage.sqlite_storage import SQLiteStorage
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -36,9 +35,11 @@ app.mount("/client", StaticFiles(directory="examples/voice-assistant/client"), n
 
 running_tasks = {}
 
-# Use SQLite for the demo so it runs anywhere without Docker
-storage = SQLiteStorage(db_path="examples/voice-assistant/sessions.db")
-session_continuity = SessionContinuity(storage_backend=storage, stale_threshold_minutes=30)
+# Use SQLite backend for local development (no Redis or Docker required)
+session_continuity = SessionContinuity(
+    db_path="examples/voice-assistant/sessions.db",
+    stale_threshold_minutes=30,
+)
 
 @app.post("/create_session")
 async def create_session():
