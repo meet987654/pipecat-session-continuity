@@ -9,17 +9,30 @@ from .storage.base import BaseStorage
 logger = logging.getLogger(__name__)
 
 class SessionContinuityManager:
-    def __init__(self, storage_backend: Optional[BaseStorage] = None, redis_url: str = None, ttl_seconds: int = 3600):
+    """
+    Manages session persistence and context checkpointing for Pipecat pipelines.
+    Defaults to SQLite storage for zero-config local development without requiring Redis.
+    Supports Redis via redis_url or custom BaseStorage backends for production environments.
+    """
+    def __init__(
+        self,
+        storage_backend: Optional[BaseStorage] = None,
+        redis_url: Optional[str] = None,
+        db_path: Optional[str] = None,
+        ttl_seconds: int = 3600,
+    ):
         self.ttl_seconds = ttl_seconds
         self.checkpoint_times = []
         
         if storage_backend:
             self.storage = storage_backend
-        else:
+        elif redis_url:
             from .storage.redis_storage import RedisStorage
-            # Default to RedisStorage for backward compatibility
-            url = redis_url or "redis://localhost:6379"
-            self.storage = RedisStorage(redis_url=url)
+            self.storage = RedisStorage(redis_url=redis_url)
+        else:
+            from .storage.sqlite_storage import SQLiteStorage
+            path = db_path or "pipecat_sessions.db"
+            self.storage = SQLiteStorage(db_path=path)
 
     def _get_key(self, session_id: str) -> str:
         return f"pipecat:session:{session_id}"

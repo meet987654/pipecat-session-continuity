@@ -25,8 +25,27 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 class SessionContinuity:
-    def __init__(self, storage_backend=None, redis_url=None, ttl_seconds=3600, secret=None, stale_threshold_minutes=30):
-        self.manager = SessionContinuityManager(storage_backend, redis_url, ttl_seconds)
+    """
+    Drop-in session continuity and connection resilience manager for Pipecat agents.
+    
+    Defaults to SQLite storage (pipecat_sessions.db) for zero-config local development without
+    requiring Redis. Pass redis_url="redis://localhost:6379" or a custom storage_backend for production.
+    """
+    def __init__(
+        self,
+        storage_backend=None,
+        redis_url=None,
+        db_path=None,
+        ttl_seconds=3600,
+        secret=None,
+        stale_threshold_minutes=30,
+    ):
+        self.manager = SessionContinuityManager(
+            storage_backend=storage_backend,
+            redis_url=redis_url,
+            db_path=db_path,
+            ttl_seconds=ttl_seconds,
+        )
         self.secret = secret
         self.stale_threshold_minutes = stale_threshold_minutes
 
