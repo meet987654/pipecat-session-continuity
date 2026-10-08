@@ -63,11 +63,10 @@ class InMemoryMetricsExporter(BaseMetricsExporter):
 
     def record_resume(self, duration_ms: float, is_resumed: bool, status: str = "success") -> None:
         self.resume_times.append(duration_ms)
-        if is_resumed:
-            if status == "success":
-                self.resume_success += 1
-            else:
-                self.resume_error += 1
+        if status != "success":
+            self.resume_error += 1
+        elif is_resumed:
+            self.resume_success += 1
         else:
             self.fresh_starts += 1
 
@@ -119,7 +118,12 @@ class PrometheusMetricsExporter(BaseMetricsExporter):
     Exports metrics using prometheus_client with standard labels and histograms.
     """
 
-    def __init__(self, registry: Optional[Any] = None, prefix: str = "pipecat_session"):
+    def __init__(
+        self,
+        registry: Optional[Any] = None,
+        prefix: str = "pipecat_session",
+        namespace: Optional[str] = None,
+    ):
         try:
             import prometheus_client
             from prometheus_client import Counter, Histogram
@@ -130,7 +134,8 @@ class PrometheusMetricsExporter(BaseMetricsExporter):
             )
 
         self.registry = registry or prometheus_client.REGISTRY
-        self.prefix = prefix
+        self.prefix = namespace or prefix
+        prefix = self.prefix
         self._in_memory = InMemoryMetricsExporter()
 
         # Checkpoint duration histogram and counter
@@ -205,6 +210,8 @@ class PrometheusMetricsExporter(BaseMetricsExporter):
     def generate_latest_str(self) -> str:
         """Returns Prometheus exposition format as a UTF-8 string."""
         return self.generate_latest().decode("utf-8")
+
+    get_latest_str = generate_latest_str
 
     def get_summary(self) -> Dict[str, Any]:
         return self._in_memory.get_summary()
