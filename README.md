@@ -18,14 +18,19 @@ When a client disconnects (network drop, browser refresh, mobile backgrounding),
 - Resume conversation state on client reconnect
 - **Robust tool-call idempotency**: Deterministic keys (tool_name + canonical arguments hash), client-side tokens, and dual-index lookup to prevent duplicate actions even if LLM generates new `tool_call_id`s on reconnect
 - Stronger contextual system prompts injected on resume for pending and completed tools
+- **Prometheus & OpenTelemetry metrics export**: Production-ready observability for checkpoint latency (histograms), resume success/error rates, reconnect counts, and tool execution status
 - Simple drop-in API designed for Pipecat event handlers
 - Explicitly documented limitations (production-ready honesty)
 
 ## Installation
 ```bash
 pip install pipecat-session-continuity
-# or
-uv add pipecat-session-continuity
+
+# With Prometheus support:
+pip install "pipecat-session-continuity[prometheus]"
+
+# With OpenTelemetry support:
+pip install "pipecat-session-continuity[opentelemetry]"
 ```
 
 ## Quick Start
@@ -34,57 +39,56 @@ uv add pipecat-session-continuity
 from pipecat_session_continuity import SessionContinuity
 
 # Zero-config: defaults to local SQLiteStorage ("pipecat_sessions.db")
-continuity = SessionContinuity()
+# with optional first-class Prometheus metrics export enabled:
+continuity = SessionContinuity(enable_prometheus=True)
 
 # Or specify a custom SQLite db path:
 # continuity = SessionContinuity(db_path="my_sessions.db")
 
 # Or connect to Redis for distributed multi-worker production:
-# continuity = SessionContinuity(redis_url="redis://localhost:6379")
+# continuity = SessionContinuity(redis_url="redis://localhost:6379", enable_prometheus=True)
+```
 
-@transport.event_handler("on_client_connected")
-async def on_client_connected(transport, client):
-    # Resume existing session context or start fresh
-    is_resumed, pending_tools = await continuity.resume_or_start(task, context, session_id)
-    
-    if is_resumed:
-        print(f"Welcome back! Restored {len(context.messages)} messages.")
+## Production Observability (Prometheus & OpenTelemetry)
 
-# Inside your tool execution handler:
-async def my_tool(params, **kwargs):
-    call_id = params.tool_call_id
-    
-    # 1. Deterministic check (identifies duplicates even if LLM generated a new tool_call_id)
-    is_dup, entry = continuity.check_tool_idempotency(
-        pending_tool_calls=pending_tools,
-        tool_name="my_tool",
-        arguments=kwargs,
-        tool_call_id=call_id,
+First-class exporters make monitoring checkpoint latency and reconnect reliability effortless in multi-worker production environments.
+
+### Prometheus
+
+Expose standard Prometheus metrics via FastAPI, aiohttp, or Flask:
+
+```python
+from fastapi import FastAPI, Response
+from pipecat_session_continuity import SessionContinuity
+
+app = FastAPI()
+continuity = SessionContinuity(enable_prometheus=True)
+
+@app.get("/metrics")
+async def metrics():
+    # Returns standard Prometheus exposition format
+    return Response(
+        content=continuity.get_prometheus_metrics(),
+        media_type="text/plain; version=0.0.4"
     )
-    if is_dup and entry:
-        if entry["status"] == "completed":
-            return f"Already completed: {entry['result']}"
-        elif entry["status"] == "pending":
-            return "Interrupted during prior attempt; please confirm before retrying."
+```
 
-    # 2. Record pending state
-    continuity.record_tool_call(pending_tools, "my_tool", arguments=kwargs, tool_call_id=call_id)
-    await continuity.checkpoint(context, session_id, pending_tools)
+Exported metrics:
+- `pipecat_session_checkpoint_latency_ms`: Histogram of context checkpoint save duration with `status` label (`success`, `error`).
+- `pipecat_session_checkpoints_total`: Counter of all checkpoint operations.
+- `pipecat_session_resume_latency_ms`: Histogram of resume and session startup latencies.
+- `pipecat_session_resumes_total`: Counter of resumes with `is_resumed` and `status` labels.
+- `pipecat_session_reconnects_total`: Counter of actual client reconnect events.
+- `pipecat_session_tool_calls_total`: Counter of tool calls with `tool_name` and `status` labels (`pending`, `completed`, `duplicate`).
 
-    # 3. Execute action
-    result = await execute_action(**kwargs)
+### OpenTelemetry
 
-    # 4. Mark complete
-    continuity.complete_tool_call(pending_tools, call_id, result=result)
-    await continuity.checkpoint(context, session_id, pending_tools)
-    return result
+Use the OpenTelemetry Metrics API exporter to forward metrics to OTel collectors (Datadog, Dynatrace, New Relic, Grafana Tempo):
 
-# Hook into the pipeline to securely save state when the LLM finishes speaking
-turn_observer = task.turn_tracking_observer
-if turn_observer:
-    @turn_observer.event_handler("on_turn_ended")
-    async def on_turn_ended(observer, *args, **kwargs):
-        await continuity.checkpoint(context, session_id, session_pending_tool_calls)
+```python
+from pipecat_session_continuity import SessionContinuity
+
+continuity = SessionContinuity(enable_opentelemetry=True)
 ```
 
 ## Architecture
@@ -94,8 +98,11 @@ graph TD
     Client[Client] <--> Transport[Pipecat Transport]
     Transport -->|on_client_connected / on_turn_ended| Continuity[SessionContinuity]
     Continuity <-->|save / load| Storage[Storage Backend]
+    Continuity -->|export| Exporters[Metrics Exporters]
     Storage -.-> Redis[(Redis)]
     Storage -.-> SQLite[(SQLite)]
+    Exporters -.-> Prom[Prometheus]
+    Exporters -.-> OTel[OpenTelemetry]
 ```
 
 ## Full API Documentation
@@ -109,8 +116,8 @@ This library currently has a few intentional boundaries:
 ## Roadmap / Planned Features
 - [x] Better tool-call idempotency (deterministic IDs based on tool + arguments & client tokens - #1)
 - [x] SQLite backend as default for local/dev (#2)
+- [x] Prometheus / OpenTelemetry metrics export (#3)
 - [ ] Full pipeline state serialization (optional)
-- [ ] Prometheus / OpenTelemetry metrics export
 - [ ] Support for Pipecat Cloud session API
 - [ ] Multi-worker / distributed Redis locking
 
