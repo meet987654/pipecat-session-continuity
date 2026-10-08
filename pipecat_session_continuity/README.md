@@ -59,12 +59,12 @@ Earlier versions keyed idempotency strictly to the LLM-generated `tool_call_id`,
 ### 2. In-Session Duplicate Delivery (At-Least-Once Delivery)
 Checkpoints happen sequentially at the end of each turn. If a server dies *while* the TTS audio is streaming to the user but *before* the checkpoint runs, the LLM state is rolled back to the previous turn. Upon reconnect, the LLM will re-generate the answer. This is an inherent trait of optimistic, asynchronous checkpointing (At-Least-Once delivery).
 
-### 3. Global, In-Process Metrics
-The `/metrics` example tracks connection attempts and checkpoint timings using simple in-memory, process-global dictionaries. 
-- **Ephemeral**: These counters reset every time the server restarts. 
-- **Global**: They aggregate stats across *all* sessions connected to that worker process. 
-- **Stateless environments**: In a multi-worker or Serverless environment, these metrics are not synchronized. 
-For production telemetry, you should push these events to a dedicated metrics backend (e.g., Prometheus, Datadog) rather than relying on an in-process dictionary.
+### 3. Production Observability vs In-Process Metrics
+Earlier iterations relied solely on in-process dictionaries for tracking metrics. Now `pipecat-session-continuity` provides first-class `PrometheusMetricsExporter` and `OpenTelemetryMetricsExporter` interfaces:
+- **Zero-dep in-process fallback**: `InMemoryMetricsExporter` computes p95, means, and status breakdowns out of the box.
+- **Prometheus**: Pass `enable_prometheus=True` to `SessionContinuity` and serve `continuity.get_prometheus_metrics()` on `/metrics` for scraping by Prometheus/Grafana.
+- **OpenTelemetry**: Pass `enable_opentelemetry=True` to export metrics through standard OTel meters and attributes.
+- **Production recommendation**: Always enable Prometheus or OpenTelemetry in multi-worker or autoscaled environments to aggregate counters and latency histograms across instances.
 
 ### 4. Localhost vs Network Testing
 When testing on `localhost`, manipulating the WiFi/Network adapter will not sever the WebSocket, because loopback traffic bypasses the network stack. Real drop testing requires forcefully terminating the server process (e.g. `Ctrl+C`) or using a tool like Toxiproxy to simulate network failure.

@@ -3,7 +3,7 @@ import os
 import sys
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, WebSocket
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 import uvicorn
 import sys
 import os
@@ -29,8 +29,8 @@ load_dotenv()
 
 mock_appointment_counter = 0
 
-# Initialize our continuity manager
-continuity = SessionContinuity()
+# Initialize our continuity manager with Prometheus metrics enabled
+continuity = SessionContinuity(enable_prometheus=True)
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -56,11 +56,24 @@ bot_metrics = {
 }
 
 @app.get("/metrics")
-async def get_metrics():
+async def get_metrics(request: Request):
+    accept_header = request.headers.get("accept", "")
+    if "text/plain" in accept_header or request.query_params.get("format") == "prometheus":
+        try:
+            return Response(content=continuity.get_prometheus_metrics(), media_type="text/plain; version=0.0.4")
+        except Exception:
+            pass
     return {
         "bot_metrics": bot_metrics,
-        "checkpoint_metrics": continuity.manager.get_metrics()
+        "checkpoint_metrics": continuity.get_metrics()
     }
+
+@app.get("/metrics/prometheus")
+async def get_prometheus_metrics():
+    try:
+        return Response(content=continuity.get_prometheus_metrics(), media_type="text/plain; version=0.0.4")
+    except Exception as e:
+        return Response(content=f"# Error exporting prometheus metrics: {e}\n", media_type="text/plain", status_code=500)
 
 @app.get("/")
 async def get_client(request: Request):

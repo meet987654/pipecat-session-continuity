@@ -24,6 +24,18 @@ dependencies = [
     "pipecat-ai>=1.5.0"
 ]
 
+[project.optional-dependencies]
+prometheus = [
+    "prometheus-client>=0.16.0",
+]
+opentelemetry = [
+    "opentelemetry-api>=1.15.0",
+]
+all = [
+    "prometheus-client>=0.16.0",
+    "opentelemetry-api>=1.15.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/meet987654/pipecat-session-continuity"
 Repository = "https://github.com/meet987654/pipecat-session-continuity"

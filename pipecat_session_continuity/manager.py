@@ -20,9 +20,16 @@ class SessionContinuityManager:
         redis_url: Optional[str] = None,
         db_path: Optional[str] = None,
         ttl_seconds: int = 3600,
+        metrics_exporter: Optional[Any] = None,
     ):
         self.ttl_seconds = ttl_seconds
         self.checkpoint_times = []
+
+        if metrics_exporter is not None:
+            self.metrics = metrics_exporter
+        else:
+            from .metrics import InMemoryMetricsExporter
+            self.metrics = InMemoryMetricsExporter()
         
         if storage_backend:
             self.storage = storage_backend
@@ -58,8 +65,11 @@ class SessionContinuityManager:
             
             elapsed_ms = (time.time() - start_time) * 1000
             self.checkpoint_times.append(elapsed_ms)
+            self.metrics.record_checkpoint(elapsed_ms, status="success")
             logger.info(f"Context saved for session {session_id} ({len(messages)} messages) in {elapsed_ms:.2f}ms.")
         except Exception as e:
+            elapsed_ms = (time.time() - start_time) * 1000
+            self.metrics.record_checkpoint(elapsed_ms, status="error")
             logger.error(f"Error saving context for session {session_id}: {e}")
 
     async def load_context(self, session_id: str) -> Optional[Dict[str, Any]]:
@@ -105,15 +115,20 @@ class SessionContinuityManager:
     def get_metrics(self) -> Dict[str, Any]:
         times = sorted(self.checkpoint_times)
         if not times:
-            return {"count": 0, "mean_ms": 0, "p95_ms": 0, "max_ms": 0}
-        
-        mean = sum(times) / len(times)
-        p95_idx = int(len(times) * 0.95)
-        if p95_idx >= len(times): p95_idx = len(times) - 1
-        
+            base_stats = {"count": 0, "mean_ms": 0.0, "p95_ms": 0.0, "max_ms": 0.0}
+        else:
+            mean = sum(times) / len(times)
+            p95_idx = int(len(times) * 0.95)
+            if p95_idx >= len(times):
+                p95_idx = len(times) - 1
+            base_stats = {
+                "count": len(times),
+                "mean_ms": round(mean, 2),
+                "p95_ms": round(times[p95_idx], 2),
+                "max_ms": round(times[-1], 2),
+            }
+
         return {
-            "count": len(times),
-            "mean_ms": round(mean, 2),
-            "p95_ms": round(times[p95_idx], 2),
-            "max_ms": round(times[-1], 2)
+            **base_stats,
+            "summary": self.metrics.get_summary(),
         }
