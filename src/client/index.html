@@ -24,15 +24,19 @@
     
     <div class="session-box">
         <p style="margin:0;">Session ID: <span id="session-id" style="color:#4CAF50; font-family:monospace; font-size:1.1em;"></span></p>
+        <p style="margin:5px 0 0 0; font-size:0.85em; color:#888;">HMAC Signature Protected | SQLite / Redis Persistent</p>
     </div>
     
-    <div class="controls">
+    <div class="controls" style="flex-wrap: wrap; justify-content: center;">
         <button id="connect-btn">Connect & Speak</button>
-        <button id="end-call-btn" disabled>End Call (Clean Disconnect)</button>
-        <button id="disconnect-btn" disabled>Simulate Drop (Kill Connection)</button>
+        <button id="end-call-btn" disabled>End Call (Clean)</button>
+        <button id="disconnect-btn" disabled>Simulate Drop (Manual)</button>
+        <button id="network-drop-btn" style="background-color:#9c27b0; color:white;" disabled>Simulate Network Drop (Auto-Backoff)</button>
+        <button id="stale-sleep-btn" style="background-color:#009688; color:white;" disabled>Simulate Mobile Sleep (Stale Resume)</button>
     </div>
 
     <div id="status">Disconnected</div>
+    <div id="retry-badge" style="display:none; margin-top:8px; padding:4px 12px; background:#333; border-radius:12px; font-size:13px; font-family:monospace; color:#ff9800;"></div>
     <div id="log"></div>
 
     <script>
@@ -43,6 +47,9 @@
         const maxBackoffMs = 10000;
         const ttlWindowMs = 3600 * 1000;
         let userInitiatedDisconnect = false;
+        const networkDropBtn = document.getElementById("network-drop-btn");
+        const staleSleepBtn = document.getElementById("stale-sleep-btn");
+        const retryBadge = document.getElementById("retry-badge");
 
         async function initSession() {
             if (!sessionId || !sessionSignature) {
@@ -164,11 +171,14 @@
 
             ws.onopen = async () => {
                 reconnectAttempt = 0; // Reset backoff on success
+                retryBadge.style.display = "none";
                 statusEl.innerText = "Connected";
                 statusEl.style.color = "#4CAF50";
                 connectBtn.disabled = true;
                 disconnectBtn.disabled = false;
                 endCallBtn.disabled = false;
+                networkDropBtn.disabled = false;
+                staleSleepBtn.disabled = false;
                 log("WebSocket connected");
 
                 // Set up mic capture at 16kHz
@@ -227,16 +237,19 @@
                     statusEl.innerText = "Disconnected (Clean). Refresh for new call.";
                     cleanClose = true;
                 } else if (userInitiatedDisconnect) {
-                    statusEl.innerText = "Simulated Drop — Click Connect to resume";
+                    statusEl.innerText = "Manual Disconnect — Click Connect to resume";
                     statusEl.style.color = "#ff9800";
+                    retryBadge.style.display = "none";
                     cleanClose = true;
                 } else {
-                    statusEl.innerText = `Disconnected (Unexpected Drop - Code ${event.code})`;
+                    statusEl.innerText = `Connection Lost (Code ${event.code}) — Auto-reconnecting...`;
                     statusEl.style.color = "#f44336";
                 }
                 connectBtn.disabled = false;
                 disconnectBtn.disabled = true;
                 endCallBtn.disabled = true;
+                networkDropBtn.disabled = true;
+                staleSleepBtn.disabled = true;
                 cleanupAudio(!cleanClose);
                 log("WebSocket closed");
 
@@ -254,10 +267,31 @@
         disconnectBtn.addEventListener("click", () => {
             if (ws) {
                 userInitiatedDisconnect = true;
-                // Simulate a drop without sending a clean close frame if possible, 
-                // but standard WebSocket API only gives us close().
                 ws.close();
-                log("Simulated disconnect");
+                log("Manual disconnect initiated");
+            }
+        });
+
+        networkDropBtn.addEventListener("click", () => {
+            if (ws) {
+                userInitiatedDisconnect = false; // Triggers auto-reconnect with backoff
+                ws.close(1006, "Abrupt Network Drop");
+                log("Simulated abrupt network drop (TCP Reset) — triggering auto-reconnect backoff");
+            }
+        });
+
+        staleSleepBtn.addEventListener("click", () => {
+            if (ws) {
+                userInitiatedDisconnect = true;
+                ws.close();
+                log("Simulating mobile app backgrounding / screen sleep (stale session threshold)...");
+                statusEl.innerText = "Mobile Backgrounded (Suspended for 3s)...";
+                statusEl.style.color = "#009688";
+                setTimeout(() => {
+                    log("Mobile device wake-up! Reconnecting with resume...");
+                    userInitiatedDisconnect = false;
+                    connectBtn.click();
+                }, 3000);
             }
         });
 
@@ -267,6 +301,7 @@
                 ws.close(1000, "Clean Disconnect");
                 statusEl.innerText = "Call Ended Normally (Refresh for new session)";
                 statusEl.style.color = "#4CAF50";
+                retryBadge.style.display = "none";
                 log("Ended call cleanly");
             }
         });
@@ -279,6 +314,7 @@
             if (elapsed > ttlWindowMs) {
                 statusEl.innerText = "Session expired, starting fresh";
                 statusEl.style.color = "#f44336";
+                retryBadge.style.display = "none";
                 localStorage.removeItem("pipecat_session_id");
                 localStorage.removeItem("pipecat_session_signature");
                 localStorage.removeItem("pipecat_session_start");
@@ -289,11 +325,14 @@
             }
             
             reconnectAttempt++;
-            let backoff = Math.pow(2, reconnectAttempt - 1) * 1000;
-            if (backoff > maxBackoffMs) backoff = maxBackoffMs;
+            // Exponential backoff with decorrelated full jitter
+            const temp = Math.min(maxBackoffMs, Math.pow(2, reconnectAttempt - 1) * 1000);
+            const backoff = Math.round(temp * 0.5 + Math.random() * (temp * 0.5));
 
-            statusEl.innerText = `Connection lost, reconnecting... (attempt ${reconnectAttempt})`;
+            statusEl.innerText = `Reconnecting to session...`;
             statusEl.style.color = "#ff9800";
+            retryBadge.style.display = "inline-block";
+            retryBadge.innerText = `Retry #${reconnectAttempt} in ${backoff}ms (Jittered Backoff)`;
             log(`Scheduling reconnect attempt ${reconnectAttempt} in ${backoff}ms`);
             
             setTimeout(() => {
