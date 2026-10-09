@@ -105,6 +105,28 @@ graph TD
     Exporters -.-> OTel[OpenTelemetry]
 ```
 
+## Realistic Failure & Chaos Testing Examples
+
+Production voice applications rarely experience clean disconnects. We provide dedicated, runnable failure scripts in the **[`examples/`](examples/README.md)** directory:
+
+1. **[Hard Process Kill & Recovery](examples/01_hard_process_kill.py)** (`01_hard_process_kill.py`):
+   Simulates catastrophic backend termination (`SIGKILL`, OOM, Kubernetes pod eviction) mid-sentence, starts a completely fresh worker process, and resumes state seamlessly with zero duplicate tool executions.
+   ```bash
+   python examples/01_hard_process_kill.py
+   ```
+
+2. **[Simulated Network Failures](examples/02_simulated_network_failures.py)** (`02_simulated_network_failures.py`):
+   Simulates transient TCP resets, in-flight action drops (preventing double billing on interrupted payment calls), and mobile backgrounding stale resumes.
+   ```bash
+   python examples/02_simulated_network_failures.py
+   ```
+
+3. **[Client-Side Reconnect Flow & Backoff](examples/03_client_reconnect_flow.py)** (`03_client_reconnect_flow.py`):
+   Reference client architecture demonstrating token caching, exponential backoff with full jitter, and client-side idempotency tokens.
+   ```bash
+   python examples/03_client_reconnect_flow.py
+   ```
+
 ## Full API Documentation
 For full installation details, API documentation, and configuration options, see the **[Full Documentation](pipecat_session_continuity/README.md)**.
 
@@ -117,6 +139,7 @@ This library currently has a few intentional boundaries:
 - [x] Better tool-call idempotency (deterministic IDs based on tool + arguments & client tokens - #1)
 - [x] SQLite backend as default for local/dev (#2)
 - [x] Prometheus / OpenTelemetry metrics export (#3)
+- [x] Realistic hard-reconnect and network-failure examples (#4)
 - [ ] Full pipeline state serialization (optional)
 - [ ] Support for Pipecat Cloud session API
 - [ ] Multi-worker / distributed Redis locking

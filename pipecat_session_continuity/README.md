@@ -67,4 +67,9 @@ Earlier iterations relied solely on in-process dictionaries for tracking metrics
 - **Production recommendation**: Always enable Prometheus or OpenTelemetry in multi-worker or autoscaled environments to aggregate counters and latency histograms across instances.
 
 ### 4. Localhost vs Network Testing
-When testing on `localhost`, manipulating the WiFi/Network adapter will not sever the WebSocket, because loopback traffic bypasses the network stack. Real drop testing requires forcefully terminating the server process (e.g. `Ctrl+C`) or using a tool like Toxiproxy to simulate network failure.
+When testing on `localhost`, manipulating the WiFi/Network adapter will not sever the WebSocket, because loopback traffic bypasses the network stack. Real drop testing requires forcefully terminating the server process (e.g. `Ctrl+C`) or simulating failures.
+
+To validate your application against real failure conditions, use our dedicated runnable failure examples in `examples/`:
+- **`examples/01_hard_process_kill.py`**: Validates recovery across violent backend process crashes (`SIGKILL` 137).
+- **`examples/02_simulated_network_failures.py`**: Simulates sudden TCP resets, in-flight action interruptions, and mobile backgrounding stale resumes.
+- **`examples/03_client_reconnect_flow.py`**: Demonstrates client exponential backoff with full jitter and client idempotency tokens.
