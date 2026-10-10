@@ -50,6 +50,9 @@ class SessionContinuityProcessor(FrameProcessor):
         checkpoint_on_end_frame: bool = True,
         checkpoint_on_function_result: bool = True,
         non_blocking: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
+        get_metadata_fn: Optional[Any] = None,
+        extra_state_fn: Optional[Any] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -62,6 +65,9 @@ class SessionContinuityProcessor(FrameProcessor):
         self.checkpoint_on_end_frame = checkpoint_on_end_frame
         self.checkpoint_on_function_result = checkpoint_on_function_result
         self.non_blocking = non_blocking
+        self.metadata = dict(metadata) if metadata else {}
+        self.get_metadata_fn = get_metadata_fn or extra_state_fn
+        self.extra_state_fn = extra_state_fn or get_metadata_fn
 
         self._active_tasks = set()
         self._checkpoint_count = 0
@@ -69,6 +75,10 @@ class SessionContinuityProcessor(FrameProcessor):
     def set_pending_tools(self, pending_tools: Any) -> None:
         """Dynamically updates the reference to pending tool calls."""
         self.pending_tool_calls = pending_tools
+
+    def set_metadata(self, metadata: Dict[str, Any]) -> None:
+        """Dynamically updates the processor's metadata dictionary."""
+        self.metadata.update(metadata)
 
     @property
     def checkpoint_count(self) -> int:
@@ -79,10 +89,20 @@ class SessionContinuityProcessor(FrameProcessor):
         """Internal helper to execute the checkpoint against continuity storage."""
         try:
             self._checkpoint_count += 1
+            current_metadata = dict(self.metadata) if self.metadata else {}
+            if self.get_metadata_fn:
+                try:
+                    dynamic_meta = self.get_metadata_fn()
+                    if isinstance(dynamic_meta, dict):
+                        current_metadata.update(dynamic_meta)
+                except Exception as ex:
+                    logger.warning(f"[SessionContinuityProcessor] Error in get_metadata_fn: {ex}")
+
             await self.continuity.checkpoint(
                 self.context,
                 self.session_id,
                 self.pending_tool_calls,
+                metadata=current_metadata if current_metadata else None,
             )
             logger.debug(
                 f"[SessionContinuityProcessor] Saved checkpoint #{self._checkpoint_count} "
