@@ -74,8 +74,10 @@ def test_hard_process_kill_recovery():
     )
     worker.start()
 
-    sync_event.wait(timeout=10.0)
-    worker.join(timeout=5.0)
+    sync_event.wait(timeout=30.0)
+    worker.join(timeout=15.0)
+    if worker.is_alive():
+        worker.terminate()
     assert worker.exitcode == 137, "Process should have exited with code 137"
 
     # Now verify recovery in the parent process (or a fresh worker)

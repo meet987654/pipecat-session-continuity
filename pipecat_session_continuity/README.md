@@ -34,13 +34,17 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, signature: s
     # ... Setup your PipelineTask and LLMContext ...
 
     # 4. Resume or Start!
-    is_resumed, pending_tool_calls = await continuity.resume_or_start(task, context, session_id)
+    is_resumed, pending_tool_calls, metadata = await continuity.resume_or_start(
+        task, context, session_id, return_metadata=True
+    )
 
-    # 5. Pipeline Integration (Zero-Boilerplate FrameProcessor)
+    # 5. Pipeline Integration (Zero-Boilerplate FrameProcessor with Metadata)
     pipeline = Pipeline([
         transport.input(),
         stt,
-        continuity.processor(session_id, context, pending_tool_calls=pending_tool_calls),
+        continuity.processor(
+            session_id, context, pending_tool_calls=pending_tool_calls, metadata=metadata
+        ),
         llm,
         tts,
         transport.output(),
@@ -79,3 +83,4 @@ To validate your application against real failure conditions, use our dedicated 
 - **`examples/02_simulated_network_failures.py`**: Simulates sudden TCP resets, in-flight action interruptions, and mobile backgrounding stale resumes.
 - **`examples/03_client_reconnect_flow.py`**: Demonstrates client exponential backoff with full jitter and client idempotency tokens.
 - **`examples/04_pipeline_processor.py`**: Demonstrates native `FrameProcessor` pipeline integration with zero audio latency penalty.
+- **`examples/05_dialog_state_metadata.py`**: Demonstrates arbitrary dialog state and user metadata persistence across drops.

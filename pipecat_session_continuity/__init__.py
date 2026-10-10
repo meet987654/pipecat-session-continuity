@@ -84,15 +84,24 @@ class SessionContinuity:
         self.secret = secret
         self.stale_threshold_minutes = stale_threshold_minutes
 
-    async def resume_or_start(self, task, context, session_id) -> tuple[bool, dict]:
+    async def resume_or_start(
+        self,
+        task,
+        context,
+        session_id: str,
+        return_metadata: bool = False,
+    ) -> tuple:
         """
         Loads context if present, wires it into the LLMContext, injects the correct
-        bridge or greet message via queue_frames, and returns (is_resumed, pending_tool_calls).
+        bridge or greet message via queue_frames, and returns:
+          - (is_resumed, pending_tool_calls) if return_metadata=False (default)
+          - (is_resumed, pending_tool_calls, metadata) if return_metadata=True
         """
         import time
         start_time = time.time()
         is_resumed = False
         pending_tool_calls = {}
+        metadata = {}
         try:
             restored_context = await self.manager.load_context(session_id)
 
@@ -102,9 +111,10 @@ class SessionContinuity:
                 raw_tools = restored_context.get("pending_tool_calls", {})
                 registry = IdempotencyRegistry(raw_tools)
                 pending_tool_calls = registry.to_dict()
+                metadata = restored_context.get("metadata", {})
                 is_resumed = True
                 time_away_seconds = restored_context.get("time_away_seconds", 0)
-                logger.info(f"Resuming session {session_id} with {len(context.get_messages())} messages and {len(pending_tool_calls)} pending tools.")
+                logger.info(f"Resuming session {session_id} with {len(context.get_messages())} messages, {len(pending_tool_calls)} pending tools, and metadata keys: {list(metadata.keys())}.")
                 
                 # Stronger Tool call hallucination mitigation
                 for idemp_key, tool_data in registry.records.items():
@@ -162,6 +172,9 @@ class SessionContinuity:
             self.metrics.record_resume(elapsed_ms, is_resumed=is_resumed, status="success")
             if is_resumed:
                 self.metrics.record_reconnect()
+
+            if return_metadata:
+                return is_resumed, pending_tool_calls, metadata
             return is_resumed, pending_tool_calls
         except Exception:
             elapsed_ms = (time.time() - start_time) * 1000
@@ -254,16 +267,52 @@ class SessionContinuity:
         self.metrics.record_tool_call(tool_name, status="completed")
         return rec
 
-    async def checkpoint(self, context, session_id, pending_tool_calls=None):
+    async def checkpoint(
+        self,
+        context,
+        session_id: str,
+        pending_tool_calls=None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ):
         """
-        Snapshots the current context messages and pending tool calls to storage.
+        Snapshots current context messages, pending tool calls, and arbitrary metadata to storage.
         """
         messages = context.get_messages()
         if isinstance(pending_tool_calls, IdempotencyRegistry):
             tools_to_save = pending_tool_calls.to_dict()
         else:
             tools_to_save = pending_tool_calls
-        await self.manager.save_context(session_id, messages, tools_to_save)
+        await self.manager.save_context(
+            session_id=session_id,
+            messages=messages,
+            pending_tool_calls=tools_to_save,
+            metadata=metadata,
+        )
+
+    async def get_metadata(self, session_id: str) -> Dict[str, Any]:
+        """
+        Retrieves custom session and dialog metadata for session_id.
+        """
+        context_data = await self.manager.load_context(session_id)
+        if context_data:
+            return context_data.get("metadata", {})
+        return {}
+
+    async def set_metadata(self, session_id: str, metadata: Dict[str, Any]) -> None:
+        """
+        Merges or updates custom metadata for an active session without modifying existing messages.
+        """
+        context_data = await self.manager.load_context(session_id)
+        messages = context_data.get("messages", []) if context_data else []
+        tools = context_data.get("pending_tool_calls", {}) if context_data else {}
+        current_meta = context_data.get("metadata", {}) if context_data else {}
+        current_meta.update(metadata)
+        await self.manager.save_context(
+            session_id=session_id,
+            messages=messages,
+            pending_tool_calls=tools,
+            metadata=current_meta,
+        )
 
     async def clear(self, session_id):
         """
@@ -307,17 +356,23 @@ class SessionContinuity:
         session_id: str,
         context: Any,
         pending_tool_calls: Optional[Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        get_metadata_fn: Optional[Any] = None,
+        extra_state_fn: Optional[Any] = None,
         **kwargs,
     ) -> SessionContinuityProcessor:
         """
         Creates a native Pipecat FrameProcessor for zero-boilerplate pipeline integration.
-        Automatically checkpoints conversation context on turn boundaries.
+        Automatically checkpoints conversation context and metadata on turn boundaries.
         """
         return SessionContinuityProcessor(
             continuity=self,
             session_id=session_id,
             context=context,
             pending_tool_calls=pending_tool_calls,
+            metadata=metadata,
+            get_metadata_fn=get_metadata_fn or extra_state_fn,
+            extra_state_fn=extra_state_fn or get_metadata_fn,
             **kwargs,
         )
 
