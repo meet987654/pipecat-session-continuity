@@ -36,10 +36,15 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, signature: s
     # 4. Resume or Start!
     is_resumed, pending_tool_calls = await continuity.resume_or_start(task, context, session_id)
 
-    # 5. Checkpoint during the call (e.g. on_turn_stopped) and on disconnect
-    @transport.event_handler("on_client_disconnected")
-    async def on_client_disconnected(t, c):
-        await continuity.checkpoint(context, session_id, pending_tool_calls)
+    # 5. Pipeline Integration (Zero-Boilerplate FrameProcessor)
+    pipeline = Pipeline([
+        transport.input(),
+        stt,
+        continuity.processor(session_id, context, pending_tool_calls=pending_tool_calls),
+        llm,
+        tts,
+        transport.output(),
+    ])
 
     await runner.run(task)
 ```
@@ -73,3 +78,4 @@ To validate your application against real failure conditions, use our dedicated 
 - **`examples/01_hard_process_kill.py`**: Validates recovery across violent backend process crashes (`SIGKILL` 137).
 - **`examples/02_simulated_network_failures.py`**: Simulates sudden TCP resets, in-flight action interruptions, and mobile backgrounding stale resumes.
 - **`examples/03_client_reconnect_flow.py`**: Demonstrates client exponential backoff with full jitter and client idempotency tokens.
+- **`examples/04_pipeline_processor.py`**: Demonstrates native `FrameProcessor` pipeline integration with zero audio latency penalty.

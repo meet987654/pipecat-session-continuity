@@ -80,6 +80,34 @@ python examples/03_client_reconnect_flow.py
 
 ---
 
+## Example 4: Native Pipecat FrameProcessor Integration (`04_pipeline_processor.py`)
+
+### Zero-Boilerplate Pipeline Interceptor
+Instead of writing manual callbacks or event listeners on individual bot components, drop `continuity.processor(session_id, context)` directly into your Pipecat `Pipeline`:
+
+```python
+pipeline = Pipeline([
+    transport.input(),
+    stt,
+    continuity.processor(session_id, context),
+    llm,
+    tts,
+    transport.output(),
+])
+```
+
+### Key Capabilities
+- **Turn Boundaries Interception**: Automatically detects and asynchronously checkpoints on `LLMFullResponseEndFrame`, `BotStoppedSpeakingFrame`, `FunctionCallResultFrame`, and `EndFrame`.
+- **Zero Audio Latency Penalty**: Frames are forwarded immediately downstream; storage I/O executes non-blockingly via managed background tasks.
+- **Graceful Shutdown**: On `EndFrame` and `cleanup()`, in-flight checkpoint tasks are cleanly drained before teardown.
+
+### Running the Example
+```bash
+python examples/04_pipeline_processor.py
+```
+
+---
+
 ## Production Testing Checklist
 
 | Failure Scenario | How to Simulate in Production | Expected Library Behavior |

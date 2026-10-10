@@ -35,6 +35,28 @@ pip install "pipecat-session-continuity[opentelemetry]"
 
 ## Quick Start
 
+### Option A: Native Zero-Boilerplate Pipeline Integration (Recommended)
+
+Simply insert `continuity.processor(session_id, context)` directly into your Pipecat `Pipeline`. It automatically intercepts turn boundaries (`LLMFullResponseEndFrame`, `BotStoppedSpeakingFrame`, `FunctionCallResultFrame`, `EndFrame`) and saves checkpoints non-blockingly with zero audio latency penalty:
+
+```python
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat_session_continuity import SessionContinuity
+
+continuity = SessionContinuity()  # Defaults to SQLite ("pipecat_sessions.db")
+
+pipeline = Pipeline([
+    transport.input(),
+    stt,
+    continuity.processor(session_id, context),
+    llm,
+    tts,
+    transport.output(),
+])
+```
+
+### Option B: Manual Lifecycle Integration
+
 ```python
 from pipecat_session_continuity import SessionContinuity
 
@@ -127,6 +149,12 @@ Production voice applications rarely experience clean disconnects. We provide de
    python examples/03_client_reconnect_flow.py
    ```
 
+4. **[Native Pipeline FrameProcessor Integration](examples/04_pipeline_processor.py)** (`04_pipeline_processor.py`):
+   Demonstrates zero-boilerplate integration using `continuity.processor(session_id, context)` directly inside a Pipecat `Pipeline`, intercepting completion frames non-blockingly with zero audio latency penalty.
+   ```bash
+   python examples/04_pipeline_processor.py
+   ```
+
 ## Full API Documentation
 For full installation details, API documentation, and configuration options, see the **[Full Documentation](pipecat_session_continuity/README.md)**.
 
@@ -140,6 +168,7 @@ This library currently has a few intentional boundaries:
 - [x] SQLite backend as default for local/dev (#2)
 - [x] Prometheus / OpenTelemetry metrics export (#3)
 - [x] Realistic hard-reconnect and network-failure examples (#4)
+- [x] Native Pipecat FrameProcessor for pipeline integration (#5)
 - [ ] Full pipeline state serialization (optional)
 - [ ] Support for Pipecat Cloud session API
 - [ ] Multi-worker / distributed Redis locking

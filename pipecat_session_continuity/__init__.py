@@ -15,6 +15,7 @@ from .metrics import (
     OpenTelemetryMetricsExporter,
     CompositeMetricsExporter,
 )
+from .processor import SessionContinuityProcessor
 from pipecat.frames.frames import LLMMessagesAppendFrame
 from typing import Optional, Any, Dict, List
 import logging
@@ -22,6 +23,7 @@ import logging
 __all__ = [
     "SessionContinuity",
     "SessionContinuityManager",
+    "SessionContinuityProcessor",
     "BaseStorage",
     "RedisStorage",
     "SQLiteStorage",
@@ -299,4 +301,26 @@ class SessionContinuity:
         Exports metrics in standard Prometheus exposition format (UTF-8 string).
         """
         return self.get_prometheus_metrics().decode("utf-8")
+
+    def create_processor(
+        self,
+        session_id: str,
+        context: Any,
+        pending_tool_calls: Optional[Any] = None,
+        **kwargs,
+    ) -> SessionContinuityProcessor:
+        """
+        Creates a native Pipecat FrameProcessor for zero-boilerplate pipeline integration.
+        Automatically checkpoints conversation context on turn boundaries.
+        """
+        return SessionContinuityProcessor(
+            continuity=self,
+            session_id=session_id,
+            context=context,
+            pending_tool_calls=pending_tool_calls,
+            **kwargs,
+        )
+
+    # Convenience alias for pipeline definitions
+    processor = create_processor
 
