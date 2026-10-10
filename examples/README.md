@@ -108,6 +108,40 @@ python examples/04_pipeline_processor.py
 
 ---
 
+## Example 5: Dialog State & User Metadata Persistence (`05_dialog_state_metadata.py`)
+
+### Business State Preservation Across Reconnects
+Real-world voice bots track essential business state (authentication flags, user IDs, shopping carts, dialog step machines) that extend beyond raw chat messages.
+
+```python
+# Save business state alongside messages
+await continuity.checkpoint(
+    context,
+    session_id,
+    metadata={"user_id": "usr_42", "verified": True, "step": "confirm_order"}
+)
+
+# On reconnect, retrieve restored metadata directly
+is_resumed, pending_tools, metadata = await continuity.resume_or_start(
+    task,
+    context,
+    session_id,
+    return_metadata=True,
+)
+```
+
+### Key Capabilities
+- **Zero-Migration Schema**: Persists arbitrary nested dictionaries to SQLite or Redis without SQL schema alterations.
+- **Dynamic Processor Callback**: Pass `get_metadata_fn=lambda: state` to `SessionContinuityProcessor` to snapshot mutating dialog states on every automatic turn boundary.
+- **Incremental Merging**: Use `await continuity.set_metadata(session_id, {...})` to update business state without touching message history.
+
+### Running the Example
+```bash
+python examples/05_dialog_state_metadata.py
+```
+
+---
+
 ## Production Testing Checklist
 
 | Failure Scenario | How to Simulate in Production | Expected Library Behavior |

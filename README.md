@@ -155,12 +155,18 @@ Production voice applications rarely experience clean disconnects. We provide de
    python examples/04_pipeline_processor.py
    ```
 
+5. **[Dialog State & User Metadata Persistence](examples/05_dialog_state_metadata.py)** (`05_dialog_state_metadata.py`):
+   Demonstrates storing and restoring arbitrary business metadata (user authentication, shopping cart, multi-step dialog state) across sudden drops without requiring a secondary database.
+   ```bash
+   python examples/05_dialog_state_metadata.py
+   ```
+
 ## Full API Documentation
 For full installation details, API documentation, and configuration options, see the **[Full Documentation](pipecat_session_continuity/README.md)**.
 
 ## Current Limitations
 This library currently has a few intentional boundaries:
-- It only persists the `LLMContext` (messages array) and pending tool calls. It does not attempt to serialize the state of other pipeline processors (like VAD state or STT buffers).
+- It only persists the `LLMContext` (messages array), pending tool calls, and user/dialog metadata. It does not attempt to serialize the state of other pipeline processors (like VAD state or STT buffers).
 - While deterministic tool keys and system prompt injection prevent duplicate tool execution at the agent boundary, non-deterministic arguments (e.g. dynamic current timestamps generated inside LLM argument JSON) may generate distinct hashes unless a client-side idempotency token is supplied.
 
 ## Roadmap / Planned Features
@@ -169,6 +175,7 @@ This library currently has a few intentional boundaries:
 - [x] Prometheus / OpenTelemetry metrics export (#3)
 - [x] Realistic hard-reconnect and network-failure examples (#4)
 - [x] Native Pipecat FrameProcessor for pipeline integration (#5)
+- [x] Support arbitrary dialog state and user metadata persistence across reconnects (#6)
 - [ ] Full pipeline state serialization (optional)
 - [ ] Support for Pipecat Cloud session API
 - [ ] Multi-worker / distributed Redis locking
