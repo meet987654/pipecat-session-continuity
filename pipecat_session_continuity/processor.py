@@ -137,3 +137,5 @@ class SessionContinuityProcessor(FrameProcessor):
         if self._active_tasks:
             await asyncio.gather(*self._active_tasks, return_exceptions=True)
             self._active_tasks.clear()
+        await super().cleanup()
+
