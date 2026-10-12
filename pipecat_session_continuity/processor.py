@@ -53,9 +53,10 @@ class SessionContinuityProcessor(FrameProcessor):
         metadata: Optional[Dict[str, Any]] = None,
         get_metadata_fn: Optional[Any] = None,
         extra_state_fn: Optional[Any] = None,
+        enable_direct_mode: bool = True,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(enable_direct_mode=enable_direct_mode, **kwargs)
         self.continuity = continuity
         self.session_id = session_id
         self.context = context
