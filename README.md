@@ -176,6 +176,7 @@ This library currently has a few intentional boundaries:
 - [x] Realistic hard-reconnect and network-failure examples (#4)
 - [x] Native Pipecat FrameProcessor for pipeline integration (#5)
 - [x] Support arbitrary dialog state and user metadata persistence across reconnects (#6)
+- [x] Benchmark audio pipeline latency overhead and guarantee non-blocking checkpointing (#7)
 - [ ] Full pipeline state serialization (optional)
 - [ ] Support for Pipecat Cloud session API
 - [ ] Multi-worker / distributed Redis locking
