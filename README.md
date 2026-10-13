@@ -161,6 +161,24 @@ Production voice applications rarely experience clean disconnects. We provide de
    python examples/05_dialog_state_metadata.py
    ```
 
+## TypeScript & JavaScript Client SDK
+
+For web and mobile applications, we provide a standalone, zero-dependency client helper in **[`client-sdk/`](client-sdk/README.md)**:
+
+```typescript
+import { ResilientVoiceSession } from "@pipecat-ai/session-continuity-client";
+
+const session = new ResilientVoiceSession({
+  wsUrl: "ws://localhost:8000/ws",
+  createSessionUrl: "/create_session",
+  onConnected: (isReconnect) => console.log(isReconnect ? "Reconnected!" : "Connected!"),
+  onResumed: (creds) => console.log("Resumed session context:", creds),
+});
+
+await session.connect();
+```
+Features automatic HMAC session bootstrapping, credential persistence (`localStorage`/memory), decorrelated jittered backoff on abrupt drops, raw PCM audio streaming, and client tool-call idempotency tokens.
+
 ## Full API Documentation
 For full installation details, API documentation, and configuration options, see the **[Full Documentation](pipecat_session_continuity/README.md)**.
 
@@ -176,7 +194,8 @@ This library currently has a few intentional boundaries:
 - [x] Realistic hard-reconnect and network-failure examples (#4)
 - [x] Native Pipecat FrameProcessor for pipeline integration (#5)
 - [x] Support arbitrary dialog state and user metadata persistence across reconnects (#6)
-- [x] Benchmark audio pipeline latency overhead and guarantee non-blocking checkpointing (#7)
+- [x] Benchmark audio pipeline latency overhead and guarantee non-blocking checkpointing (#13)
+- [x] Lightweight TypeScript/JavaScript client helper for WebSockets & WebRTC reconnects (#14)
 - [ ] Full pipeline state serialization (optional)
 - [ ] Support for Pipecat Cloud session API
 - [ ] Multi-worker / distributed Redis locking
