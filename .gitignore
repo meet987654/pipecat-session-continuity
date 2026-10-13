@@ -9,3 +9,5 @@ test-install-*/
 __pycache__/
 *.pyc
 *.db
+node_modules/
+client-sdk/dist/

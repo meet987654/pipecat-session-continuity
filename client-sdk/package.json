@@ -1,0 +1,23 @@
+{
+  "name": "@pipecat-ai/session-continuity-client",
+  "version": "0.1.0",
+  "description": "Lightweight, resilient TypeScript/JavaScript client helper for Pipecat session continuity, automatic WebSocket reconnection with jittered backoff, and tool idempotency.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test dist/**/*.test.js || ts-node --test src/**/*.test.ts"
+  },
+  "keywords": [
+    "pipecat",
+    "voice-agent",
+    "session-continuity",
+    "websocket",
+    "reconnect",
+    "resilience",
+    "idempotency"
+  ],
+  "author": "Meet Patel",
+  "license": "MIT"
+}
