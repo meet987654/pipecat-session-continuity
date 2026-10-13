@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "node --test dist/**/*.test.js || ts-node --test src/**/*.test.ts"
+    "test": "node --test tests/*.test.mjs"
   },
   "keywords": [
     "pipecat",
