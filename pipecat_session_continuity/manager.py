@@ -44,9 +44,15 @@ class SessionContinuityManager:
     def _get_key(self, session_id: str) -> str:
         return f"pipecat:session:{session_id}"
 
-    async def save_context(self, session_id: str, messages: List[Dict[str, Any]], pending_tool_calls: Dict[str, Dict[str, Any]] = None):
+    async def save_context(
+        self,
+        session_id: str,
+        messages: List[Dict[str, Any]],
+        pending_tool_calls: Dict[str, Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ):
         """
-        Snapshots the conversation history and tool state to the storage backend under the given session_id.
+        Snapshots the conversation history, tool state, and arbitrary metadata to the storage backend.
         """
         if not session_id:
             logger.warning("No session_id provided, skipping context save.")
@@ -58,6 +64,7 @@ class SessionContinuityManager:
             data = json.dumps({
                 "messages": messages,
                 "pending_tool_calls": pending_tool_calls or {},
+                "metadata": metadata if metadata is not None else {},
                 "updated_at": time.time()
             })
             
@@ -91,6 +98,7 @@ class SessionContinuityManager:
                 updated_at = parsed.get("updated_at", time.time())
                 time_away_seconds = time.time() - updated_at
                 parsed["time_away_seconds"] = time_away_seconds
+                parsed.setdefault("metadata", {})
                 
                 logger.info(f"Context restored for session {session_id}.")
                 return parsed

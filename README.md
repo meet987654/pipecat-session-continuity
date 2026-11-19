@@ -35,6 +35,28 @@ pip install "pipecat-session-continuity[opentelemetry]"
 
 ## Quick Start
 
+### Option A: Native Zero-Boilerplate Pipeline Integration (Recommended)
+
+Simply insert `continuity.processor(session_id, context)` directly into your Pipecat `Pipeline`. It automatically intercepts turn boundaries (`LLMFullResponseEndFrame`, `BotStoppedSpeakingFrame`, `FunctionCallResultFrame`, `EndFrame`) and saves checkpoints non-blockingly with zero audio latency penalty:
+
+```python
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat_session_continuity import SessionContinuity
+
+continuity = SessionContinuity()  # Defaults to SQLite ("pipecat_sessions.db")
+
+pipeline = Pipeline([
+    transport.input(),
+    stt,
+    continuity.processor(session_id, context),
+    llm,
+    tts,
+    transport.output(),
+])
+```
+
+### Option B: Manual Lifecycle Integration
+
 ```python
 from pipecat_session_continuity import SessionContinuity
 
@@ -127,12 +149,42 @@ Production voice applications rarely experience clean disconnects. We provide de
    python examples/03_client_reconnect_flow.py
    ```
 
+4. **[Native Pipeline FrameProcessor Integration](examples/04_pipeline_processor.py)** (`04_pipeline_processor.py`):
+   Demonstrates zero-boilerplate integration using `continuity.processor(session_id, context)` directly inside a Pipecat `Pipeline`, intercepting completion frames non-blockingly with zero audio latency penalty.
+   ```bash
+   python examples/04_pipeline_processor.py
+   ```
+
+5. **[Dialog State & User Metadata Persistence](examples/05_dialog_state_metadata.py)** (`05_dialog_state_metadata.py`):
+   Demonstrates storing and restoring arbitrary business metadata (user authentication, shopping cart, multi-step dialog state) across sudden drops without requiring a secondary database.
+   ```bash
+   python examples/05_dialog_state_metadata.py
+   ```
+
+## TypeScript & JavaScript Client SDK
+
+For web and mobile applications, we provide a standalone, zero-dependency client helper in **[`client-sdk/`](client-sdk/README.md)**:
+
+```typescript
+import { ResilientVoiceSession } from "@pipecat-ai/session-continuity-client";
+
+const session = new ResilientVoiceSession({
+  wsUrl: "ws://localhost:8000/ws",
+  createSessionUrl: "/create_session",
+  onConnected: (isReconnect) => console.log(isReconnect ? "Reconnected!" : "Connected!"),
+  onResumed: (creds) => console.log("Resumed session context:", creds),
+});
+
+await session.connect();
+```
+Features automatic HMAC session bootstrapping, credential persistence (`localStorage`/memory), decorrelated jittered backoff on abrupt drops, raw PCM audio streaming, and client tool-call idempotency tokens.
+
 ## Full API Documentation
 For full installation details, API documentation, and configuration options, see the **[Full Documentation](pipecat_session_continuity/README.md)**.
 
 ## Current Limitations
 This library currently has a few intentional boundaries:
-- It only persists the `LLMContext` (messages array) and pending tool calls. It does not attempt to serialize the state of other pipeline processors (like VAD state or STT buffers).
+- It only persists the `LLMContext` (messages array), pending tool calls, and user/dialog metadata. It does not attempt to serialize the state of other pipeline processors (like VAD state or STT buffers).
 - While deterministic tool keys and system prompt injection prevent duplicate tool execution at the agent boundary, non-deterministic arguments (e.g. dynamic current timestamps generated inside LLM argument JSON) may generate distinct hashes unless a client-side idempotency token is supplied.
 - **Lost replies stay "unconfirmed" unless you register a status check.** If a tool's side effect reached your backend but the reply was lost, the library only knows the call was `pending`. It prevents a second execution and tells the LLM to ask the caller to confirm. It cannot learn what actually happened by itself. Register a hook with `continuity.register_status_check(tool_name, fn)` to resolve it on resume (a `not_found` answer is only acted on if you also pass `retry_on_not_found=True`) (see `examples/06_status_check_hook.py`). Without one, nothing is verified.
 - **Notices are instructions to the LLM, not enforcement.** Duplicate execution is blocked only where your tool wrapper calls `check_tool_idempotency`; whether the model words its reply correctly is up to the model. `benchmarks/measure_pending_notice_claims.py` measures this for a model of your choice (not run in CI).
@@ -143,6 +195,10 @@ This library currently has a few intentional boundaries:
 - [x] SQLite backend as default for local/dev (#2)
 - [x] Prometheus / OpenTelemetry metrics export (#3)
 - [x] Realistic hard-reconnect and network-failure examples (#4)
+- [x] Native Pipecat FrameProcessor for pipeline integration (#5)
+- [x] Support arbitrary dialog state and user metadata persistence across reconnects (#6)
+- [x] Benchmark audio pipeline latency overhead and guarantee non-blocking checkpointing (#13)
+- [x] Lightweight TypeScript/JavaScript client helper for WebSockets & WebRTC reconnects (#14)
 - [ ] Full pipeline state serialization (optional)
 - [ ] Support for Pipecat Cloud session API
 - [ ] Multi-worker / distributed Redis locking

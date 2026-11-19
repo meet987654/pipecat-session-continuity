@@ -80,6 +80,68 @@ python examples/03_client_reconnect_flow.py
 
 ---
 
+## Example 4: Native Pipecat FrameProcessor Integration (`04_pipeline_processor.py`)
+
+### Zero-Boilerplate Pipeline Interceptor
+Instead of writing manual callbacks or event listeners on individual bot components, drop `continuity.processor(session_id, context)` directly into your Pipecat `Pipeline`:
+
+```python
+pipeline = Pipeline([
+    transport.input(),
+    stt,
+    continuity.processor(session_id, context),
+    llm,
+    tts,
+    transport.output(),
+])
+```
+
+### Key Capabilities
+- **Turn Boundaries Interception**: Automatically detects and asynchronously checkpoints on `LLMFullResponseEndFrame`, `BotStoppedSpeakingFrame`, `FunctionCallResultFrame`, and `EndFrame`.
+- **Zero Audio Latency Penalty**: Frames are forwarded immediately downstream; storage I/O executes non-blockingly via managed background tasks.
+- **Graceful Shutdown**: On `EndFrame` and `cleanup()`, in-flight checkpoint tasks are cleanly drained before teardown.
+
+### Running the Example
+```bash
+python examples/04_pipeline_processor.py
+```
+
+---
+
+## Example 5: Dialog State & User Metadata Persistence (`05_dialog_state_metadata.py`)
+
+### Business State Preservation Across Reconnects
+Real-world voice bots track essential business state (authentication flags, user IDs, shopping carts, dialog step machines) that extend beyond raw chat messages.
+
+```python
+# Save business state alongside messages
+await continuity.checkpoint(
+    context,
+    session_id,
+    metadata={"user_id": "usr_42", "verified": True, "step": "confirm_order"}
+)
+
+# On reconnect, retrieve restored metadata directly
+is_resumed, pending_tools, metadata = await continuity.resume_or_start(
+    task,
+    context,
+    session_id,
+    return_metadata=True,
+)
+```
+
+### Key Capabilities
+- **Zero-Migration Schema**: Persists arbitrary nested dictionaries to SQLite or Redis without SQL schema alterations.
+- **Dynamic Processor Callback**: Pass `get_metadata_fn=lambda: state` to `SessionContinuityProcessor` to snapshot mutating dialog states on every automatic turn boundary.
+- **Incremental Merging**: Use `await continuity.set_metadata(session_id, {...})` to update business state without touching message history.
+
+### Running the Example
+```bash
+python examples/05_dialog_state_metadata.py
+```
+
+---
+
 ## Example 6: Status-Check Hook for Lost Replies (`06_status_check_hook.py`)
 The booking reached the server but the reply was dropped. Registers `continuity.register_status_check()` so resume asks the backend what happened: `completed` (result stated to the LLM), `not_found` (opt-in via `retry_on_not_found=True`: one retry under the same idempotency key; otherwise treated like unknown), or `unknown`/error/timeout (1 s default), which falls back to the "unconfirmed" notice.
 
