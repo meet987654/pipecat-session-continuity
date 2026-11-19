@@ -184,6 +184,7 @@ class SessionContinuity:
         is_resumed = False
         pending_tool_calls = {}
         metadata = {}
+        unconfirmed_tools: List[str] = []
         try:
             restored_context = await self.manager.load_context(session_id)
 
@@ -207,6 +208,7 @@ class SessionContinuity:
                     status = tool_data.get("status")
 
                     if status == "pending":
+                        unconfirmed_tools.append(tool_name)
                         sys_msg = {
                             "role": "system",
                             "content": (
@@ -271,6 +273,17 @@ class SessionContinuity:
                     "role": "user",
                     "content": "[System Notice: A new user has just connected to the voice call. Please greet them warmly and ask how you can help.]"
                 }
+
+            if is_resumed and unconfirmed_tools:
+                # The last message is what the LLM answers, and a generic "acknowledge and ask how
+                # to continue" message was found to override the pending-tool system notice (the
+                # model never mentioned the interrupted action). Put the instruction here too.
+                names = ", ".join(f"'{n}'" for n in dict.fromkeys(unconfirmed_tools))
+                msg["content"] = msg["content"].rstrip("]") + (
+                    f" Before anything else, tell the user that their request ({names}) was interrupted by the "
+                    f"disconnect and that you cannot confirm whether it went through, and ask whether they received a "
+                    f"confirmation. Do not say it succeeded and do not say it failed. Do not call the tool again until they answer.]"
+                )
             
             await task.queue_frames([LLMMessagesAppendFrame([msg])])
             elapsed_ms = (time.time() - start_time) * 1000
