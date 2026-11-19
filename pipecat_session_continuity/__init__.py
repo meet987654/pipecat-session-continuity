@@ -4,6 +4,7 @@ from .storage.base import BaseStorage
 from .storage.redis_storage import RedisStorage
 from .storage.sqlite_storage import SQLiteStorage
 from .idempotency import (
+    RETRY_ALLOWED,
     IdempotencyRegistry,
     generate_idempotency_key,
     canonicalize_arguments,
@@ -16,7 +17,10 @@ from .metrics import (
     CompositeMetricsExporter,
 )
 from pipecat.frames.frames import LLMMessagesAppendFrame
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, Callable, Tuple
+import asyncio
+import inspect
+import time
 import logging
 
 __all__ = [
@@ -26,6 +30,7 @@ __all__ = [
     "RedisStorage",
     "SQLiteStorage",
     "IdempotencyRegistry",
+    "RETRY_ALLOWED",
     "generate_idempotency_key",
     "canonicalize_arguments",
     "BaseMetricsExporter",
@@ -52,6 +57,7 @@ class SessionContinuity:
         ttl_seconds=3600,
         secret=None,
         stale_threshold_minutes=30,
+        status_check_timeout_seconds: float = 1.0,
         enable_prometheus: bool = False,
         enable_opentelemetry: bool = False,
         metrics_exporter: Optional[BaseMetricsExporter] = None,
@@ -81,6 +87,82 @@ class SessionContinuity:
         self.metrics = self.manager.metrics
         self.secret = secret
         self.stale_threshold_minutes = stale_threshold_minutes
+        self.status_check_timeout_seconds = status_check_timeout_seconds
+        self._status_checks: Dict[str, Dict[str, Any]] = {}
+
+    def register_status_check(
+        self,
+        tool_name: str,
+        fn: Callable,
+        retry_on_not_found: bool = False,
+    ) -> None:
+        """
+        Registers an async status-check hook for `tool_name`.
+
+        On resume, every record for that tool still "pending" is passed to
+        ``fn(idempotency_key, args)``, which returns one of:
+          - ``("completed", result)`` / ``{"status": "completed", "result": ...}``:
+            the action happened. The record is marked completed and the LLM is
+            told the confirmed result.
+          - ``"not_found"``: by default treated like ``"unknown"`` (the LLM is told
+            to ask the caller). Status APIs can lag behind the write, and retrying
+            against an API that ignores idempotency keys would double-book. Only if
+            you pass ``retry_on_not_found=True`` is exactly one retry allowed,
+            under the SAME idempotency key.
+          - ``"unknown"``, an exception, or no answer within
+            ``status_check_timeout_seconds`` (default 1 s): behaviour is
+            unchanged, the LLM is told the outcome is unconfirmed.
+
+        Tools without a hook behave exactly as before.
+        """
+        self._status_checks[tool_name] = {"fn": fn, "retry_on_not_found": retry_on_not_found}
+
+    @staticmethod
+    def _normalize_status_result(raw: Any) -> Tuple[str, Any]:
+        status, result = raw, None
+        if isinstance(raw, tuple) and raw:
+            status, result = raw[0], (raw[1] if len(raw) > 1 else None)
+        elif isinstance(raw, dict):
+            status, result = raw.get("status"), raw.get("result")
+        if status in ("completed", "not_found"):
+            return status, result
+        return "unknown", None
+
+    async def _run_status_checks(self, registry: IdempotencyRegistry) -> None:
+        """Runs registered hooks concurrently for unresolved records and updates the registry."""
+        targets = [
+            (key, rec)
+            for key, rec in registry.records.items()
+            if rec.get("status") in ("pending", RETRY_ALLOWED)
+            and rec.get("tool_name") in self._status_checks
+        ]
+        if not targets:
+            return
+
+        async def _one(key: str, rec: Dict[str, Any]) -> Tuple[str, Any]:
+            async def _call():
+                out = self._status_checks[rec["tool_name"]]["fn"](key, rec.get("arguments"))
+                if inspect.isawaitable(out):
+                    out = await out
+                return out
+
+            try:
+                raw = await asyncio.wait_for(_call(), timeout=self.status_check_timeout_seconds)
+                return key, self._normalize_status_result(raw)
+            except asyncio.TimeoutError:
+                logger.warning(f"Status check for '{rec.get('tool_name')}' ({key}) timed out; leaving unconfirmed.")
+            except Exception as e:
+                logger.warning(f"Status check for '{rec.get('tool_name')}' ({key}) failed: {e!r}; leaving unconfirmed.")
+            return key, ("unknown", None)
+
+        for key, (status, result) in await asyncio.gather(*[_one(k, r) for k, r in targets]):
+            if status == "completed":
+                rec = registry.complete_call(key, result)
+                if rec is not None:
+                    rec["confirmed_by"] = "status_check"
+            elif status == "not_found" and self._status_checks[registry.records[key]["tool_name"]]["retry_on_not_found"]:
+                registry.records[key]["status"] = RETRY_ALLOWED
+                registry.records[key]["updated_at"] = time.time()
 
     async def resume_or_start(self, task, context, session_id) -> tuple[bool, dict]:
         """
@@ -99,6 +181,7 @@ class SessionContinuity:
                 context.set_messages(messages)
                 raw_tools = restored_context.get("pending_tool_calls", {})
                 registry = IdempotencyRegistry(raw_tools)
+                await self._run_status_checks(registry)
                 pending_tool_calls = registry.to_dict()
                 is_resumed = True
                 time_away_seconds = restored_context.get("time_away_seconds", 0)
@@ -119,6 +202,28 @@ class SessionContinuity:
                                 f"Do NOT call this tool again for the same request or arguments. "
                                 f"Inform the user you are resuming the previous task, clarify that the outcome of '{tool_name}' is unconfirmed, "
                                 f"and ask them to confirm before retrying.]"
+                            )
+                        }
+                        context.add_message(sys_msg)
+                    elif status == RETRY_ALLOWED:
+                        sys_msg = {
+                            "role": "system",
+                            "content": (
+                                f"[System Notice: The connection dropped while executing the tool '{tool_name}'{args_desc}. "
+                                f"A status check confirmed that this action did NOT happen. You may call '{tool_name}' once more "
+                                f"with the same arguments, passing idempotency key '{idemp_key}'. Do not retry more than once.]"
+                            )
+                        }
+                        context.add_message(sys_msg)
+                    elif status == "completed" and tool_data.get("confirmed_by") == "status_check":
+                        result = tool_data.get("result")
+                        result_desc = f" Confirmed result: {result}." if result is not None else ""
+                        sys_msg = {
+                            "role": "system",
+                            "content": (
+                                f"[System Notice: A status check confirmed that the tool '{tool_name}'{args_desc} was successfully executed "
+                                f"before the connection dropped.{result_desc} "
+                                f"Do NOT call '{tool_name}' again with these arguments. Use the confirmed result to respond to the user.]"
                             )
                         }
                         context.add_message(sys_msg)

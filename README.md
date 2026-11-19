@@ -134,6 +134,9 @@ For full installation details, API documentation, and configuration options, see
 This library currently has a few intentional boundaries:
 - It only persists the `LLMContext` (messages array) and pending tool calls. It does not attempt to serialize the state of other pipeline processors (like VAD state or STT buffers).
 - While deterministic tool keys and system prompt injection prevent duplicate tool execution at the agent boundary, non-deterministic arguments (e.g. dynamic current timestamps generated inside LLM argument JSON) may generate distinct hashes unless a client-side idempotency token is supplied.
+- **Lost replies stay "unconfirmed" unless you register a status check.** If a tool's side effect reached your backend but the reply was lost, the library only knows the call was `pending`. It prevents a second execution and tells the LLM to ask the caller to confirm. It cannot learn what actually happened by itself. Register a hook with `continuity.register_status_check(tool_name, fn)` to resolve it on resume (a `not_found` answer is only acted on if you also pass `retry_on_not_found=True`) (see `examples/06_status_check_hook.py`). Without one, nothing is verified.
+- **Notices are instructions to the LLM, not enforcement.** Duplicate execution is blocked only where your tool wrapper calls `check_tool_idempotency`; whether the model words its reply correctly is up to the model. `benchmarks/measure_pending_notice_claims.py` measures this for a model of your choice (not run in CI).
+- A status-check hook adds at most `status_check_timeout_seconds` (default 1 s; lower means a slow status API falls back to "unconfirmed" more often, higher means a slower resume) to a resume. Hooks run concurrently, and with an instant hook the measured overhead was under 1 ms (`benchmarks/measure_status_check_latency.py`).
 
 ## Roadmap / Planned Features
 - [x] Better tool-call idempotency (deterministic IDs based on tool + arguments & client tokens - #1)

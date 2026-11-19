@@ -3,6 +3,11 @@ import json
 import time
 from typing import Any, Dict, Optional, Tuple, Union
 
+# Status set by a registered status-check hook when the backend reports that the
+# action never happened. The next register_call() on the same key consumes the
+# single permitted retry and flips the record back to "pending".
+RETRY_ALLOWED = "retry_allowed"
+
 
 def canonicalize_arguments(arguments: Any) -> str:
     """
@@ -108,6 +113,10 @@ class IdempotencyRegistry:
                 "created_at": val.get("created_at", time.time()),
                 "updated_at": val.get("updated_at", time.time()),
             }
+            if "attempts" in val:
+                record["attempts"] = val["attempts"]
+            if "confirmed_by" in val:
+                record["confirmed_by"] = val["confirmed_by"]
 
             self.records[idemp_key] = record
             if call_id:
@@ -134,6 +143,11 @@ class IdempotencyRegistry:
         now = time.time()
         if idemp_key in self.records:
             record = self.records[idemp_key]
+            if record.get("status") == RETRY_ALLOWED:
+                # A status check proved the action did not happen: this is the
+                # one permitted retry, under the SAME idempotency key.
+                record["status"] = "pending"
+                record["attempts"] = record.get("attempts", 1) + 1
             if tool_call_id:
                 record["tool_call_id"] = tool_call_id
                 self._call_id_to_key[tool_call_id] = idemp_key
