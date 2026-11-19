@@ -148,6 +148,9 @@ The booking reached the server but the reply was dropped. Registers `continuity.
 ```bash
 python examples/06_status_check_hook.py
 ```
+
+---
+
 ## Production Testing Checklist
 
 | Failure Scenario | How to Simulate in Production | Expected Library Behavior |
