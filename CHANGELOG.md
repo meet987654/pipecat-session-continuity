@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-19
+### Added
+- **Status-check hooks**: `SessionContinuity.register_status_check(tool_name, fn)`. On resume, pending records for that tool are checked via `fn(idempotency_key, args)`: `completed` marks the record done and tells the LLM the confirmed result; `not_found` is treated like `unknown` unless the hook is registered with `retry_on_not_found=True`, in which case exactly one retry is allowed under the same idempotency key (new `retry_allowed` status); `unknown`, an exception, or a timeout (`status_check_timeout_seconds`, default 1 s) keeps the existing "unconfirmed" notice.
+- `tests/test_lost_reply.py` (booking lands, reply dropped, no double booking) and `tests/test_status_check.py`.
+- `examples/06_status_check_hook.py`, `benchmarks/measure_status_check_latency.py`, `benchmarks/measure_pending_notice_claims.py`.
+### Changed
+- Behaviour is unchanged for tools without a registered hook.
+
 ## [0.2.1] - 2026-07-10
 ### Fixed
 - 0.2.0 was missing the `storage` subpackage in the published wheel; fixed setuptools package discovery in `pyproject.toml`.

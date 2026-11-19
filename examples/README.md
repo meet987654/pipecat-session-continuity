@@ -142,6 +142,15 @@ python examples/05_dialog_state_metadata.py
 
 ---
 
+## Example 6: Status-Check Hook for Lost Replies (`06_status_check_hook.py`)
+The booking reached the server but the reply was dropped. Registers `continuity.register_status_check()` so resume asks the backend what happened: `completed` (result stated to the LLM), `not_found` (opt-in via `retry_on_not_found=True`: one retry under the same idempotency key; otherwise treated like unknown), or `unknown`/error/timeout (1 s default), which falls back to the "unconfirmed" notice.
+
+```bash
+python examples/06_status_check_hook.py
+```
+
+---
+
 ## Production Testing Checklist
 
 | Failure Scenario | How to Simulate in Production | Expected Library Behavior |

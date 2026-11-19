@@ -65,6 +65,24 @@ Earlier versions keyed idempotency strictly to the LLM-generated `tool_call_id`,
 - The `IdempotencyRegistry` supports dual lookup (by deterministic key or legacy `tool_call_id`), and `SessionContinuity.resume_or_start()` injects rich contextual system notices containing arguments and strict non-replay directives.
 - *Best practice*: If your tool takes dynamic arguments like "current timestamp", pass a client-side idempotency token or normalize the parameters before checking idempotency.
 
+#### Resolving an unconfirmed call: status-check hooks
+If the side effect reached your backend but the reply was lost, the record stays `pending` and the LLM is told the outcome is unconfirmed. To resolve it on resume, register an async hook per tool:
+
+```python
+async def check_booking(idempotency_key, args):
+    row = await bookings.find_by_key(idempotency_key)   # your backend
+    return ("completed", row.id) if row else "not_found"
+
+continuity.register_status_check("book_appointment", check_booking)   # retry_on_not_found=False by default
+```
+
+The hook returns `("completed", result)` (or `{"status": "completed", "result": ...}`), `"not_found"`, or `"unknown"`:
+- `completed`: the record is marked completed and the LLM is told the confirmed result.
+- `not_found`: **treated like `unknown` by default.** Status APIs can lag behind the write, so "not found" may just mean "not visible yet", and retrying against an API that ignores idempotency keys would double-book. Pass `retry_on_not_found=True` only if your backend honours idempotency keys or your status API is strongly consistent; then exactly one retry is allowed under the **same** idempotency key (`record["idempotency_key"]`), which you must pass to your API. A second re-call is blocked.
+- `unknown`, an exception, or no answer within `SessionContinuity(status_check_timeout_seconds=1.0)`: unchanged behaviour, the LLM is told to ask the caller. Trade-off: a shorter timeout keeps resume fast but a slow status API more often falls back to "unconfirmed"; a longer one resolves more cases but delays the caller's resume by up to that long.
+
+Tools without a hook behave exactly as before. Hooks run concurrently on resume. See `examples/06_status_check_hook.py`.
+
 ### 2. In-Session Duplicate Delivery (At-Least-Once Delivery)
 Checkpoints happen sequentially at the end of each turn. If a server dies *while* the TTS audio is streaming to the user but *before* the checkpoint runs, the LLM state is rolled back to the previous turn. Upon reconnect, the LLM will re-generate the answer. This is an inherent trait of optimistic, asynchronous checkpointing (At-Least-Once delivery).
 
