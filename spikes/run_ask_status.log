@@ -1,0 +1,80 @@
+stock    trial  0: ok   bookings=1  
+stock    trial  1: ok   bookings=1  
+stock    trial  2: ok   bookings=1  
+stock    trial  3: ok   bookings=1  
+stock    trial  4: ok   bookings=1  
+stock    trial  5: ok   bookings=1  
+stock    trial  6: ok   bookings=1  
+stock    trial  7: ok   bookings=1  
+stock    trial  8: ok   bookings=1  
+stock    trial  9: ok   bookings=1  
+stock    trial 10: ok   bookings=1  
+stock    trial 11: ok   bookings=1  
+stock    trial 12: ok   bookings=1  
+stock    trial 13: ok   bookings=1  
+stock    trial 14: ok   bookings=1  
+stock    trial 15: ok   bookings=1  
+stock    trial 16: ok   bookings=1  
+stock    trial 17: ok   bookings=1  
+stock    trial 18: ok   bookings=1  
+stock    trial 19: ok   bookings=1  
+[32m2026-11-25 01:53:50.585[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36mpush_error_frame[0m:[36m721[0m - [31m[1mGroqLLMService#41 exception (C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\.venv\Lib\site-packages\openai\_streaming.py:205): Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'][0m
+[32m2026-11-25 01:53:50.586[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.worker[0m:[36m_source_push_frame[0m:[36m1158[0m - [33m[1mPipelineTask#41: Something went wrong: ErrorFrame#0(error: Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'], fatal: False)[0m
+[32m2026-11-25 01:53:57.923[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36mpush_error_frame[0m:[36m721[0m - [31m[1mGroqLLMService#43 exception (C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\.venv\Lib\site-packages\openai\_streaming.py:205): Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'][0m
+[32m2026-11-25 01:53:57.924[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.worker[0m:[36m_source_push_frame[0m:[36m1158[0m - [33m[1mPipelineTask#43: Something went wrong: ErrorFrame#1(error: Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'], fatal: False)[0m
+[32m2026-11-25 01:54:05.279[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36mpush_error_frame[0m:[36m721[0m - [31m[1mGroqLLMService#45 exception (C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\.venv\Lib\site-packages\openai\_streaming.py:205): Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'][0m
+[32m2026-11-25 01:54:05.280[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.worker[0m:[36m_source_push_frame[0m:[36m1158[0m - [33m[1mPipelineTask#45: Something went wrong: ErrorFrame#2(error: Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'], fatal: False)[0m
+naive    trial  0: INV  bookings=1  error in session 2: ["Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time']"]
+[32m2026-11-25 01:54:08.415[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36mpush_error_frame[0m:[36m721[0m - [31m[1mGroqLLMService#47 exception (C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\.venv\Lib\site-packages\openai\_streaming.py:205): Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'][0m
+[32m2026-11-25 01:54:08.416[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.worker[0m:[36m_source_push_frame[0m:[36m1158[0m - [33m[1mPipelineTask#47: Something went wrong: ErrorFrame#3(error: Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'], fatal: False)[0m
+naive    trial  1: DUP  bookings=2  
+naive    trial  2: DUP  bookings=2  
+naive    trial  3: ok   bookings=1  
+naive    trial  4: DUP  bookings=2  
+naive    trial  5: DUP  bookings=2  
+[32m2026-11-25 01:54:54.138[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36mpush_error_frame[0m:[36m721[0m - [31m[1mGroqLLMService#59 exception (C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\.venv\Lib\site-packages\openai\_streaming.py:205): Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'][0m
+[32m2026-11-25 01:54:54.139[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.worker[0m:[36m_source_push_frame[0m:[36m1158[0m - [33m[1mPipelineTask#59: Something went wrong: ErrorFrame#4(error: Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'], fatal: False)[0m
+naive    trial  6: DUP  bookings=2  
+naive    trial  7: DUP  bookings=2  
+naive    trial  8: DUP  bookings=2  
+naive    trial  9: DUP  bookings=2  
+naive    trial 10: ok   bookings=1  
+naive    trial 11: DUP  bookings=2  
+naive    trial 12: ok   bookings=1  
+naive    trial 13: ok   bookings=1  
+naive    trial 14: DUP  bookings=2  
+naive    trial 15: DUP  bookings=2  
+naive    trial 16: ok   bookings=1  
+naive    trial 17: DUP  bookings=2  
+[32m2026-11-25 01:56:39.843[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36mpush_error_frame[0m:[36m721[0m - [31m[1mGroqLLMService#85 exception (C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\.venv\Lib\site-packages\openai\_streaming.py:205): Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'][0m
+[32m2026-11-25 01:56:39.844[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.worker[0m:[36m_source_push_frame[0m:[36m1158[0m - [33m[1mPipelineTask#85: Something went wrong: ErrorFrame#5(error: Error during completion: Tool call validation failed: tool call validation failed: parameters for tool book_appointment did not match schema: errors: [missing properties: 'patient_name', 'day', 'slot_time'], fatal: False)[0m
+naive    trial 18: ok   bookings=1  
+naive    trial 19: ok   bookings=1  
+library  trial  0: ok   bookings=1  
+library  trial  1: ok   bookings=1  
+library  trial  2: ok   bookings=1  
+library  trial  3: ok   bookings=1  
+library  trial  4: ok   bookings=1  
+library  trial  5: ok   bookings=1  
+library  trial  6: ok   bookings=1  
+library  trial  7: ok   bookings=1  
+library  trial  8: ok   bookings=1  
+library  trial  9: ok   bookings=1  
+library  trial 10: ok   bookings=1  
+library  trial 11: ok   bookings=1  
+library  trial 12: ok   bookings=1  
+library  trial 13: ok   bookings=1  
+library  trial 14: ok   bookings=1  
+library  trial 15: ok   bookings=1  
+library  trial 16: ok   bookings=1  
+library  trial 17: ok   bookings=1  
+library  trial 18: ok   bookings=1  
+library  trial 19: ok   bookings=1  
+
+model=openai/gpt-oss-120b  reask=ask_status
+condition  valid  dup  rate  95% Wilson CI   invalid
+stock         20    0  0.00  0.00-0.16      0
+naive         19   12  0.63  0.41-0.81      1
+library       20    0  0.00  0.00-0.16      0
+
+per-trial detail: C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1_results_ask_status.json
