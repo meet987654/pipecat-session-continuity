@@ -73,6 +73,18 @@ REASKS = {
     # The caller only asks whether it went through.
     "ask_status": "Sorry, the line cut out. Did my Thursday 3pm cleaning get booked?",
 }
+# Turn 3 (--turns 3): the caller answers the agent's "did you get a confirmation?" question.
+ANSWER = "No, I didn't get anything. Please book it."
+JUDGE_LABELS = ("SAYS_BOOKED", "SAYS_NOT_BOOKED", "UNCONFIRMED", "NO_STATEMENT")
+JUDGE_PROMPT = (
+    "A voice agent for a dental clinic was asked to book a Thursday 3pm cleaning. Below is the agent's "
+    "final utterance to the caller. What does it tell the caller about whether that appointment is booked?\n"
+    "SAYS_BOOKED: states or implies it is booked/confirmed/all set.\n"
+    "SAYS_NOT_BOOKED: states or implies it is not booked, failed, or that no booking exists.\n"
+    "UNCONFIRMED: says it cannot confirm, is unsure, or is checking.\n"
+    "NO_STATEMENT: says nothing about the booking's status (e.g. only asks a question).\n"
+    "Answer with exactly one label.\n\nUtterance:\n"
+)
 
 
 # ---------------------------------------------------------------- mock tool server
@@ -123,6 +135,8 @@ class Tap:
     tool_calls: int = 0
     errors: list = field(default_factory=list)
     text: list = field(default_factory=list)
+    responses: list = field(default_factory=list)  # one entry per LLM response, verbatim
+    _current: list = field(default_factory=list)
     last_activity: float = field(default_factory=time.time)
 
 
@@ -140,12 +154,15 @@ class TapProcessor(FrameProcessor):
             pass
         elif isinstance(frame, LLMFullResponseEndFrame):
             self.tap.response_ends += 1
+            self.tap.responses.append("".join(self.tap._current))
+            self.tap._current = []
             self.tap.last_activity = time.time()
         elif isinstance(frame, FunctionCallInProgressFrame):
             self.tap.tool_calls += 1
             self.tap.last_activity = time.time()
         elif isinstance(frame, LLMTextFrame):
             self.tap.text.append(frame.text)
+            self.tap._current.append(frame.text)
             self.tap.last_activity = time.time()
         await self.push_frame(frame, direction)
 
@@ -201,13 +218,14 @@ class Session:
 
 
 # ---------------------------------------------------------------- one trial
-async def run_trial(condition, model, reask, db_dir, idx):
+async def run_trial(condition, model, reask, db_dir, idx, turns=2):
     server = MockToolServer()
     continuity = SessionContinuity(db_path=os.path.join(db_dir, f"t{idx}.db"), secret="spike")
     session_id = f"spike-{condition}-{idx}"
     pending = {}
     guarded = condition == "library"
     suppressed = []
+    results_returned = []  # every result the agent actually received from the tool
 
     async def book_appointment(params: FunctionCallParams, patient_name: str, day: str, slot_time: str):
         """Book a dental appointment.
@@ -222,15 +240,16 @@ async def run_trial(condition, model, reask, db_dir, idx):
             is_dup, rec = continuity.check_tool_idempotency(pending, "book_appointment", arguments=args)
             if is_dup:
                 suppressed.append(rec.get("status"))
-                await params.result_callback(
-                    {"status": "unconfirmed_duplicate_blocked",
-                     "detail": "An identical booking was already sent before the disconnect; its outcome is unconfirmed."}
-                )
+                blocked = {"status": "unconfirmed_duplicate_blocked",
+                           "detail": "An identical booking was already sent before the disconnect; its outcome is unconfirmed."}
+                results_returned.append(blocked)
+                await params.result_callback(blocked)
                 return
             continuity.record_tool_call(pending, "book_appointment", arguments=args, tool_call_id=params.tool_call_id)
         result = await server.book(patient_name, day, slot_time)
         if guarded:
             continuity.complete_tool_call(pending, params.tool_call_id, result)
+        results_returned.append(result)
         await params.result_callback(result)
 
     out = {"condition": condition, "trial": idx, "valid": False}
@@ -274,13 +293,25 @@ async def run_trial(condition, model, reask, db_dir, idx):
     ends0, calls0 = s2.tap.response_ends, s2.tap.tool_calls
     await s2.say(REASKS[reask])
     settled = await s2.wait_settled(ends0, calls0)
+    if turns >= 3 and settled and not s2.tap.errors:
+        ends1, calls1 = s2.tap.response_ends, s2.tap.tool_calls
+        await s2.say(ANSWER)
+        settled = await s2.wait_settled(ends1, calls1)
     await s2.stop()
+
+    out["turns"] = turns
+    out["s2_responses"] = s2.tap.responses + (["".join(s2.tap._current)] if s2.tap._current else [])
+    spoken = [t for t in out["s2_responses"] if t.strip()]
+    out["closing_utterance"] = spoken[-1] if spoken else ""
+    out["tool_results_returned"] = results_returned
+    out["booked_result_seen"] = any(r.get("status") == "booked" for r in results_returned)
 
     out["s2_text"] = "".join(s2.tap.text)
     out["ledger"] = [{k: v for k, v in b.items() if k != "t"} for b in server.ledger]
     out["max_bookings_same_slot"] = server.bookings_for_one_slot()
     out["duplicate"] = out["max_bookings_same_slot"] >= 2
     out["guard_suppressed"] = len(suppressed)
+    out["booking_made"] = len(server.ledger) >= 1
     if s2.tap.errors:
         out["reason"] = f"error in session 2: {s2.tap.errors[:1]}"
     elif not settled:
@@ -288,6 +319,43 @@ async def run_trial(condition, model, reask, db_dir, idx):
     else:
         out["valid"] = True
     return out
+
+
+async def judge(model, utterance):
+    """Labels what the closing utterance claims. Groq, temperature 0."""
+    if not utterance.strip():
+        return "NO_STATEMENT"
+    from openai import AsyncOpenAI, RateLimitError
+
+    client = AsyncOpenAI(base_url="https://api.groq.com/openai/v1", api_key=os.environ["GROQ_API_KEY"])
+    for attempt in range(8):
+        try:
+            r = await client.chat.completions.create(
+                model=model, temperature=0, max_tokens=1024,
+                messages=[{"role": "user", "content": JUDGE_PROMPT + utterance}],
+            )
+            text = (r.choices[0].message.content or "").upper()
+            for label in ("SAYS_NOT_BOOKED", "SAYS_BOOKED", "UNCONFIRMED", "NO_STATEMENT"):
+                if label in text:
+                    return label
+            return "UNPARSED"
+        except RateLimitError:
+            await asyncio.sleep(3 * (attempt + 1))
+    return "JUDGE_FAILED"
+
+
+def false_claim(r):
+    """The agent asserted an outcome the ledger contradicts, or one it had no evidence for.
+
+    Ledger truth: booking_made. Evidence: a "booked" result actually returned to the agent.
+    UNCONFIRMED and NO_STATEMENT are never false claims.
+    """
+    label = r.get("judge_label")
+    if label == "SAYS_NOT_BOOKED":
+        return r["booking_made"]  # contradicts the ledger
+    if label == "SAYS_BOOKED":
+        return (not r["booking_made"]) or (not r["booked_result_seen"])  # false, or unsupported
+    return False
 
 
 def wilson(k, n, z=1.96):
@@ -306,12 +374,14 @@ async def main():
     ap.add_argument("--conditions", default="stock,naive,library")
     ap.add_argument("--model", default="openai/gpt-oss-120b")
     ap.add_argument("--reask", default="insist", choices=sorted(REASKS))
+    ap.add_argument("--turns", type=int, default=2, choices=(2, 3),
+                    help="2 = ask, drop, re-ask (first spike). 3 = also answer the agent's question.")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     if not os.environ.get("GROQ_API_KEY"):
         sys.exit("GROQ_API_KEY is not set (looked in the environment and .env)")
 
-    out_path = a.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), f"phase1_results_{a.reask}.json")
+    out_path = a.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), f"phase1{'b' if a.turns == 3 else ''}_results_{a.reask}.json")
     results = []
     with tempfile.TemporaryDirectory() as db_dir:
         for cond in a.conditions.split(","):
@@ -319,27 +389,40 @@ async def main():
                 attempts = 0
                 while True:
                     attempts += 1
-                    r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts}")
+                    r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts}", a.turns)
                     r["attempts"] = attempts
                     if r["valid"] or attempts >= 3:
                         break
                     await asyncio.sleep(5)
+                if r["valid"]:
+                    r["judge_label"] = await judge(a.model, r["closing_utterance"])
+                    r["false_claim"] = false_claim(r)
                 results.append(r)
                 flag = "DUP" if r.get("duplicate") else ("ok " if r["valid"] else "INV")
-                print(f"{cond:8s} trial {i:2d}: {flag}  bookings={r.get('max_bookings_same_slot')}  {r.get('reason', '')}", flush=True)
+                print(f"{cond:8s} trial {i:2d}: {flag}  bookings={r.get('max_bookings_same_slot')}  guard={r.get('guard_suppressed')}  judge={r.get('judge_label')}  {r.get('reason', '')}", flush=True)
                 with open(out_path, "w", encoding="utf-8") as f:
-                    json.dump({"model": a.model, "reask": a.reask, "results": results}, f, indent=2)
+                    json.dump({"model": a.model, "reask": a.reask, "turns": a.turns, "results": results}, f, indent=2)
                 await asyncio.sleep(1)
 
-    print(f"\nmodel={a.model}  reask={a.reask}")
-    print(f"{'condition':10s} {'valid':>5s} {'dup':>4s} {'rate':>5s}  95% Wilson CI   invalid")
+    print(f"\nmodel={a.model}  reask={a.reask}  turns={a.turns}")
+    metrics = (("duplicate", lambda r: r["duplicate"]),
+               ("guard engaged", lambda r: r["guard_suppressed"] > 0),
+               ("loss", lambda r: not r["booking_made"]),
+               ("false claim", lambda r: r.get("false_claim")))
     for cond in a.conditions.split(","):
         rs = [r for r in results if r["condition"] == cond]
         v = [r for r in rs if r["valid"]]
-        k = sum(1 for r in v if r["duplicate"])
-        lo, hi = wilson(k, len(v))
-        rate = k / len(v) if v else float("nan")
-        print(f"{cond:10s} {len(v):5d} {k:4d} {rate:5.2f}  {lo:.2f}-{hi:.2f}      {len(rs) - len(v)}")
+        print(f"\n{cond}: {len(v)} valid, {len(rs) - len(v)} invalid")
+        for name, fn in metrics:
+            k = sum(1 for r in v if fn(r))
+            lo, hi = wilson(k, len(v))
+            print(f"  {name:14s} {k:2d}/{len(v):<2d}  {lo:.2f}-{hi:.2f}")
+        labels = {}
+        for r in v:
+            labels[r.get("judge_label")] = labels.get(r.get("judge_label"), 0) + 1
+        print(f"  judge labels   {labels}")
+        if v and not any(r["guard_suppressed"] for r in v) and cond == "library":
+            print("  ** guard never engaged: the duplicate result says nothing about the guard **")
     print(f"\nper-trial detail: {out_path}")
 
 

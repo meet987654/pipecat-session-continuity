@@ -1,0 +1,32 @@
+[32m2026-11-25 02:05:47.879[0m | [1mINFO    [0m | [36mpipecat[0m:[36m<module>[0m:[36m54[0m - [1mᓚᘏᗢ Pipecat 1.5.0 (Python 3.13.7 (main, Sep 18 2025, 19:43:45) [MSC v.1944 64 bit (AMD64)]) ᓚᘏᗢ[0m
+library  trial  0: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial  1: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial  2: ok   bookings=1  guard=0  judge=SAYS_NOT_BOOKED  
+library  trial  3: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial  4: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial  5: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial  6: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial  7: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial  8: ok   bookings=1  guard=0  judge=UNCONFIRMED  
+library  trial  9: ok   bookings=1  guard=0  judge=UNCONFIRMED  
+library  trial 10: ok   bookings=1  guard=0  judge=NO_STATEMENT  
+library  trial 11: ok   bookings=1  guard=0  judge=SAYS_NOT_BOOKED  
+library  trial 12: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial 13: ok   bookings=1  guard=0  judge=NO_STATEMENT  
+library  trial 14: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial 15: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial 16: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial 17: ok   bookings=1  guard=1  judge=SAYS_NOT_BOOKED  
+library  trial 18: ok   bookings=1  guard=1  judge=UNCONFIRMED  
+library  trial 19: ok   bookings=1  guard=0  judge=SAYS_NOT_BOOKED  
+
+model=openai/gpt-oss-120b  reask=insist  turns=3
+
+library: 20 valid, 0 invalid
+  duplicate       0/20  0.00-0.16
+  guard engaged  13/20  0.43-0.82
+  loss            0/20  0.00-0.16
+  false claim     4/20  0.08-0.42
+  judge labels   {'UNCONFIRMED': 14, 'SAYS_NOT_BOOKED': 4, 'NO_STATEMENT': 2}
+
+per-trial detail: C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist.json
