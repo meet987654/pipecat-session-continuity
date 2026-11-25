@@ -8,6 +8,12 @@ from typing import Any, Dict, Optional, Tuple, Union
 # single permitted retry and flips the record back to "pending".
 RETRY_ALLOWED = "retry_allowed"
 
+# Set on resume when a pending record is older than its tool's pending_timeout and
+# no status check could resolve it. The outcome is unknown; it is a decision for the
+# agent and caller, not a block. The guard lets the next identical call through
+# (once), which flips the record back to "pending".
+UNRESOLVED = "unresolved"
+
 
 def canonicalize_arguments(arguments: Any) -> str:
     """
@@ -115,8 +121,9 @@ class IdempotencyRegistry:
             }
             if "attempts" in val:
                 record["attempts"] = val["attempts"]
-            if "confirmed_by" in val:
-                record["confirmed_by"] = val["confirmed_by"]
+            for extra in ("confirmed_by", "unresolved_reason"):
+                if extra in val:
+                    record[extra] = val[extra]
 
             self.records[idemp_key] = record
             if call_id:
@@ -143,9 +150,10 @@ class IdempotencyRegistry:
         now = time.time()
         if idemp_key in self.records:
             record = self.records[idemp_key]
-            if record.get("status") == RETRY_ALLOWED:
-                # A status check proved the action did not happen: this is the
-                # one permitted retry, under the SAME idempotency key.
+            if record.get("status") in (RETRY_ALLOWED, UNRESOLVED):
+                # A status check proved the action did not happen, or the record
+                # outlived its pending_timeout unresolved and the caller chose to
+                # retry: the one permitted retry, under the SAME idempotency key.
                 record["status"] = "pending"
                 record["attempts"] = record.get("attempts", 1) + 1
             if tool_call_id:
