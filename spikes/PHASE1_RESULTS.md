@@ -48,4 +48,6 @@ pick a different time", all in trials that never re-attempted.
 - Mentioning the pending booking: 78/78 across all arms, against 0/20 before `ae340cf`. That closes the
   pending-notice benchmark.
 - **`committed` arm: not run yet.** Groq's free-tier 200k tokens/day limit was hit after the `unknown` arm.
-  The partial run (4/20 valid) was discarded.
+  The first attempt got 4 valid trials before 16 died on 429s. Those 4 were deleted by mistake, not kept,
+  so the arm restarts from zero. The runner now treats 429s as infra events, not trial rows, checkpoints
+  every trial, records tokens per trial, checks the budget before starting, and stops cleanly on a daily cap.

@@ -26,6 +26,15 @@ Usage:
   flags: --conditions stock,naive,library  --model openai/gpt-oss-120b  --reask insist|ask_status
          --turns 2|3  --resolver none|committed|unknown (library only)
          --rescore FILE: add mention_label / false_claim_kind to an existing results file, no new trials
+         --max-trials-per-run N  --daily-token-cap 200000  --daily-request-cap 1000  --max-wait 900
+         --fresh (ignore an existing results file instead of resuming it)
+
+Rate limits (Groq free tier: tokens/day, requests/day, tokens/minute). A trial that hits an API
+error is an infrastructure failure, not data: it is not written as a result row. On a per-minute
+429 the runner waits the retry time the 429 reports and re-runs the trial. On a per-day 429 it
+stops cleanly: the daily window is rolling, so its retry time is when one request fits, not a trial. Results are checkpointed after every trial, and
+re-running the same command resumes at the first missing trial. Infra events are kept in the
+results file under "infra_events", separately from "results".
 
 Resolver arms (library condition, Phase 1c): the app registers a status check that calls the
 mock server's booking lookup (GET /bookings/{idempotency_key}, modelled as get_booking()).
@@ -49,6 +58,7 @@ from loguru import logger
 
 from pipecat.frames.frames import (
     ErrorFrame,
+    MetricsFrame,
     FunctionCallInProgressFrame,
     LLMFullResponseEndFrame,
     LLMMessagesAppendFrame,
@@ -56,7 +66,8 @@ from pipecat.frames.frames import (
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
-from pipecat.pipeline.task import PipelineTask
+from pipecat.metrics.metrics import LLMUsageMetricsData
+from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
@@ -100,6 +111,49 @@ JUDGE_PROMPT = (
     "NO_STATEMENT: says nothing about the booking's status (e.g. only asks a question).\n"
     "Answer with exactly one label.\n\nUtterance:\n"
 )
+
+
+# ---------------------------------------------------------------- rate limits and usage
+USAGE = {"tokens": 0, "requests": 0}  # trials run one at a time, so a process-wide counter is enough
+
+
+class RateLimited(Exception):
+    def __init__(self, retry_after_s, detail):
+        super().__init__(detail)
+        self.retry_after_s = retry_after_s
+        # Groq's daily caps are rolling windows: "retry in 2m" means the next request fits, not a
+        # whole ~3.5k-token trial. Retrying would start trials that die halfway and burn tokens.
+        self.daily = is_daily_cap(detail)
+
+
+def is_daily_cap(text):
+    t = str(text)
+    return "per day" in t or "(TPD)" in t or "(RPD)" in t
+
+
+def redact(text):
+    import re
+    return re.sub(r"org_[A-Za-z0-9]+", "org_REDACTED", str(text))
+
+
+def retry_after_from(text, headers=None):
+    """Seconds to wait, from the retry-after header or the 429 body's "try again in 1m55.3s"."""
+    import re
+    if headers and headers.get("retry-after"):
+        try:
+            return float(headers["retry-after"])
+        except ValueError:
+            pass
+    m = re.search(r"try again in ((?P<h>\d+)h)?((?P<m>\d+)m(?!s))?((?P<s>[\d.]+)s)?((?P<ms>[\d.]+)ms)?", str(text))
+    if not m or not any(m.group(g) for g in ("h", "m", "s", "ms")):
+        return None
+    g = lambda k: float(m.group(k) or 0)
+    return g("h") * 3600 + g("m") * 60 + g("s") + g("ms") / 1000
+
+
+def is_rate_limit(text):
+    t = str(text)
+    return "429" in t or "rate_limit" in t or "Rate limit" in t
 
 
 # ---------------------------------------------------------------- mock tool server
@@ -176,6 +230,11 @@ class TapProcessor(FrameProcessor):
         await super().process_frame(frame, direction)
         if isinstance(frame, ErrorFrame):
             self.tap.errors.append(str(frame.error))
+        elif self.counts and isinstance(frame, MetricsFrame):
+            for d in frame.data:
+                if isinstance(d, LLMUsageMetricsData):
+                    USAGE["tokens"] += d.value.total_tokens or 0
+                    USAGE["requests"] += 1
         elif not self.counts or direction != FrameDirection.DOWNSTREAM:
             pass
         elif isinstance(frame, LLMFullResponseEndFrame):
@@ -203,7 +262,8 @@ class Session:
             api_key=os.environ["GROQ_API_KEY"], settings=GroqLLMService.Settings(model=model)
         )
         pipeline = Pipeline([TapProcessor(self.tap, False), agg.user(), llm, TapProcessor(self.tap, True), agg.assistant()])
-        self.task = PipelineTask(pipeline, enable_rtvi=False, idle_timeout_secs=None, check_dangling_tasks=False)
+        self.task = PipelineTask(pipeline, params=PipelineParams(enable_metrics=True, enable_usage_metrics=True),
+                                 enable_rtvi=False, idle_timeout_secs=None, check_dangling_tasks=False)
         self.runner = PipelineRunner(handle_sigint=False, check_dangling_tasks=False)
         self._run = None
 
@@ -299,6 +359,15 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
         await params.result_callback(result)
 
     out = {"condition": condition, "trial": idx, "valid": False, "resolver": resolver}
+    usage0 = dict(USAGE)
+
+    def infra_check(errors):
+        """API errors are infrastructure, not agent behaviour: raise instead of returning a row."""
+        for e in errors:
+            if is_rate_limit(e):
+                raise RateLimited(retry_after_from(e), redact(e)[:400])
+        if errors:
+            raise RateLimited(30.0, redact(errors[0])[:400])  # other API error: short back-off
 
     # Session 1: ask, tool commits, call drops.
     s1 = Session(model, server, [{"role": "system", "content": SYSTEM}], book_appointment)
@@ -307,9 +376,10 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
     try:
         await asyncio.wait_for(server.dropped.wait(), 60)
     except asyncio.TimeoutError:
-        out["reason"] = "no_tool_call_in_session_1" if not s1.tap.errors else f"error: {s1.tap.errors[:1]}"
-        out["s1_text"] = "".join(s1.tap.text)
         await s1.stop()
+        infra_check(s1.tap.errors)
+        out["reason"] = "no_tool_call_in_session_1"
+        out["s1_text"] = "".join(s1.tap.text)
         return out
     await asyncio.sleep(0.3)  # the transport notices the drop a moment later
     snapshot = json.loads(json.dumps(s1.context.get_messages(), default=str))
@@ -344,6 +414,7 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
         await s2.say(ANSWER)
         settled = await s2.wait_settled(ends1, calls1)
     await s2.stop()
+    infra_check(s2.tap.errors)
 
     out["turns"] = turns
     out["s2_responses"] = s2.tap.responses + (["".join(s2.tap._current)] if s2.tap._current else [])
@@ -360,9 +431,9 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
     out["s2_tool_calls"] = s2.tap.tool_calls
     out["resolver_answers"] = resolver_answers
     out["booking_made"] = len(server.ledger) >= 1
-    if s2.tap.errors:
-        out["reason"] = f"error in session 2: {s2.tap.errors[:1]}"
-    elif not settled:
+    out["agent_tokens"] = USAGE["tokens"] - usage0["tokens"]
+    out["agent_requests"] = USAGE["requests"] - usage0["requests"]
+    if not settled:
         out["reason"] = "session 2 did not settle"
     else:
         out["valid"] = True
@@ -380,18 +451,26 @@ async def judge(model, utterance, prompt=None, labels=None, empty="NO_STATEMENT"
     client = AsyncOpenAI(base_url="https://api.groq.com/openai/v1", api_key=os.environ["GROQ_API_KEY"])
     for attempt in range(8):
         try:
+            USAGE["requests"] += 1
             r = await client.chat.completions.create(
                 model=model, temperature=0, max_tokens=1024,
                 messages=[{"role": "user", "content": prompt + utterance}],
             )
+            USAGE["tokens"] += (r.usage.total_tokens if r.usage else 0)
             text = (r.choices[0].message.content or "").upper()
             for label in labels:
                 if label in text:
                     return label
             return "UNPARSED"
-        except RateLimitError:
-            await asyncio.sleep(3 * (attempt + 1))
+        except RateLimitError as e:
+            wait = retry_after_from(e, e.response.headers if e.response is not None else None) or 3 * (attempt + 1)
+            if wait > JUDGE_MAX_WAIT or is_daily_cap(e):
+                raise RateLimited(wait, redact(e)[:400])
+            await asyncio.sleep(wait + 1)
     return "JUDGE_FAILED"
+
+
+JUDGE_MAX_WAIT = 900
 
 
 def false_claim(r):
@@ -426,6 +505,7 @@ def attempted_rebook(r):
 
 async def annotate(model, r):
     """Judge labels for a valid trial. The mention judge reads the first post-resume reply."""
+    u0 = dict(USAGE)
     if "judge_label" not in r:
         r["judge_label"] = await judge(model, r["closing_utterance"])
     r["false_claim"] = false_claim(r)
@@ -434,6 +514,8 @@ async def annotate(model, r):
         first = r["s2_responses"][0]
         r["first_reply"] = first
         r["mention_label"] = await judge(model, first, MENTION_PROMPT, ("MENTIONS", "SILENT"), empty="SILENT")
+    r["judge_tokens"] = r.get("judge_tokens", 0) + USAGE["tokens"] - u0["tokens"]
+    r["judge_requests"] = r.get("judge_requests", 0) + USAGE["requests"] - u0["requests"]
 
 
 def wilson(k, n, z=1.96):
@@ -444,6 +526,39 @@ def wilson(k, n, z=1.96):
     c = (p + z * z / (2 * n)) / d
     h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
     return (max(0.0, c - h), min(1.0, c + h))
+
+
+def trial_index(r):
+    return r["index"] if "index" in r else int(str(r["trial"]).split("-")[0])
+
+
+def per_trial_cost(spike_dir, default_tokens=3500, default_requests=8):
+    """Mean tokens and requests per valid trial from recorded results, or a default."""
+    import glob
+    rows = []
+    for f in glob.glob(os.path.join(spike_dir, "phase1b_results_*.json")):
+        with open(f, encoding="utf-8") as fh:
+            rows += [r for r in json.load(fh)["results"] if r.get("valid") and "agent_tokens" in r]
+    if not rows:
+        return default_tokens, default_requests, f"defaults (no recorded usage yet: {default_tokens} tokens, {default_requests} requests)"
+    tok = sum(r["agent_tokens"] + r.get("judge_tokens", 0) for r in rows) / len(rows)
+    req = sum(r["agent_requests"] + r.get("judge_requests", 0) for r in rows) / len(rows)
+    return tok, req, f"{len(rows)} recorded trials"
+
+
+def probe_remaining_requests(model):
+    """One max_tokens=1 call (~75 tokens) to read x-ratelimit-remaining-requests."""
+    from openai import OpenAI, RateLimitError
+    try:
+        r = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=os.environ["GROQ_API_KEY"]) \
+            .chat.completions.with_raw_response.create(model=model, max_tokens=1, messages=[{"role": "user", "content": "hi"}])
+        return int(r.headers.get("x-ratelimit-remaining-requests"))
+    except RateLimitError as e:
+        wait = retry_after_from(e, e.response.headers if e.response is not None else None)
+        print(f"         probe hit a 429 now: {redact(e)[:200]} (retry in {wait}s)")
+        return 0
+    except Exception:
+        return None
 
 
 def summarize(results, conditions):
@@ -493,7 +608,15 @@ async def main():
                     help="library only: status check that resolves the pending booking on resume")
     ap.add_argument("--rescore", default=None, help="annotate an existing results file instead of running trials")
     ap.add_argument("--out", default=None)
+    ap.add_argument("--fresh", action="store_true", help="start over instead of resuming an existing results file")
+    ap.add_argument("--max-trials-per-run", type=int, default=None, help="run at most N new trials, then stop")
+    ap.add_argument("--daily-token-cap", type=int, default=200_000)
+    ap.add_argument("--daily-request-cap", type=int, default=1_000)
+    ap.add_argument("--max-wait", type=float, default=900, help="longest rate-limit wait (s) before stopping cleanly")
+    ap.add_argument("--over-budget", action="store_true", help="run even if the estimate exceeds the daily caps")
     a = ap.parse_args()
+    global JUDGE_MAX_WAIT
+    JUDGE_MAX_WAIT = a.max_wait
     if not os.environ.get("GROQ_API_KEY"):
         sys.exit("GROQ_API_KEY is not set (looked in the environment and .env)")
 
@@ -511,27 +634,78 @@ async def main():
 
     suffix = "" if a.resolver == "none" else f"_{a.resolver}"
     out_path = a.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), f"phase1{'b' if a.turns == 3 else ''}_results_{a.reask}{suffix}.json")
-    results = []
-    with tempfile.TemporaryDirectory() as db_dir:
-        for cond in a.conditions.split(","):
-            for i in range(a.trials):
-                attempts = 0
-                while True:
-                    attempts += 1
-                    r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts}", a.turns, a.resolver)
-                    r["attempts"] = attempts
-                    if r["valid"] or attempts >= 3:
-                        break
-                    await asyncio.sleep(5)
-                if r["valid"]:
-                    await annotate(a.model, r)
-                results.append(r)
-                flag = "DUP" if r.get("duplicate") else ("ok " if r["valid"] else "INV")
-                print(f"{cond:8s} trial {i:2d}: {flag}  bookings={r.get('max_bookings_same_slot')}  guard={r.get('guard_suppressed')}  judge={r.get('judge_label')}  kind={r.get('false_claim_kind')}  mention={r.get('mention_label')}  {r.get('reason', '')}", flush=True)
-                with open(out_path, "w", encoding="utf-8") as f:
-                    json.dump({"model": a.model, "reask": a.reask, "turns": a.turns, "resolver": a.resolver, "results": results}, f, indent=2)
-                await asyncio.sleep(1)
+    config = {"model": a.model, "reask": a.reask, "turns": a.turns, "resolver": a.resolver}
+    results, infra_events = [], []
+    if os.path.exists(out_path) and not a.fresh:
+        with open(out_path, encoding="utf-8") as f:
+            prev = json.load(f)
+        if any(prev.get(k, "none" if k == "resolver" else None) != v for k, v in config.items()):
+            sys.exit(f"{out_path} was made with different settings; pass --fresh or --out")
+        results, infra_events = prev["results"], prev.get("infra_events", [])
+        print(f"resuming {out_path}: {len(results)} trials already recorded")
 
+    def done(cond, i):
+        return any(r["condition"] == cond and trial_index(r) == i for r in results)
+
+    todo = [(c, i) for c in a.conditions.split(",") for i in range(a.trials) if not done(c, i)]
+    if a.max_trials_per_run:
+        todo = todo[: a.max_trials_per_run]
+    tok, req, src = per_trial_cost(os.path.dirname(out_path))
+    print(f"budget: {len(todo)} trials x ~{tok:,.0f} tokens = ~{len(todo) * tok:,.0f} tokens "
+          f"(daily cap {a.daily_token_cap:,}); ~{len(todo) * req:.0f} requests (daily cap {a.daily_request_cap:,}). "
+          f"Per-trial cost from {src}.")
+    remaining_req = probe_remaining_requests(a.model)
+    if remaining_req is not None:
+        print(f"         Groq reports {remaining_req} requests left today. Tokens left today is not reported until a 429.")
+    fits = int(min(a.daily_token_cap / tok, (remaining_req if remaining_req is not None else a.daily_request_cap) / req))
+    if len(todo) > fits and not a.over_budget:
+        sys.exit(f"over budget: ~{fits} trials fit in one day's caps (less if tokens were already used today). "
+                 f"Rerun with --max-trials-per-run {fits} (it resumes later), or --over-budget to run anyway.")
+
+    def save():
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump({**config, "results": results, "infra_events": infra_events}, f, indent=2)
+
+    stopped = None
+    with tempfile.TemporaryDirectory() as db_dir:
+        for cond, i in todo:
+            attempts = 0  # behavioural re-tries (e.g. no tool call in session 1); infra re-tries don't count
+            while True:
+                try:
+                    r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts + 1}", a.turns, a.resolver)
+                    if r["valid"]:
+                        await annotate(a.model, r)
+                except RateLimited as e:
+                    infra_events.append({"condition": cond, "index": i, "t": time.time(),
+                                         "retry_after_s": e.retry_after_s, "detail": redact(e)})
+                    save()
+                    wait = e.retry_after_s or 60
+                    if e.daily:
+                        stopped = (f"daily cap reached ({e.retry_after_s or 0:.0f}s until the next request fits, "
+                                   f"not a whole trial; the window is rolling)")
+                        break
+                    if wait > a.max_wait:
+                        stopped = f"rate limit: retry in {wait / 3600:.1f} h (more than --max-wait {a.max_wait}s)"
+                        break
+                    print(f"{cond:8s} trial {i:2d}: rate limited, waiting {wait:.0f}s (infra, not recorded as a trial)", flush=True)
+                    await asyncio.sleep(wait + 2)
+                    continue
+                attempts += 1
+                r["attempts"] = attempts
+                if r["valid"] or attempts >= 3:
+                    break
+                await asyncio.sleep(5)
+            if stopped:
+                break
+            r["index"] = i
+            results.append(r)
+            save()
+            flag = "DUP" if r.get("duplicate") else ("ok " if r["valid"] else "INV")
+            print(f"{cond:8s} trial {i:2d}: {flag}  bookings={r.get('max_bookings_same_slot')}  guard={r.get('guard_suppressed')}  judge={r.get('judge_label')}  kind={r.get('false_claim_kind')}  mention={r.get('mention_label')}  tokens={r.get('agent_tokens', 0) + r.get('judge_tokens', 0)}  {r.get('reason', '')}", flush=True)
+            await asyncio.sleep(1)
+
+    if stopped:
+        print(f"\nSTOPPED cleanly: {stopped}. {len(results)} trials saved; rerun the same command to resume.")
     print(f"\nmodel={a.model}  reask={a.reask}  turns={a.turns}  resolver={a.resolver}")
     summarize(results, a.conditions.split(","))
     print(f"\nper-trial detail: {out_path}")
