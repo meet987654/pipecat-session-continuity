@@ -258,3 +258,17 @@ async def test_only_whole_session_expiry_unblocks_and_it_drops_the_conversation(
     resumed, pending, _ = await resume(continuity)
     assert not resumed and pending == {}  # registry AND conversation are gone
     assert call_tool(continuity, pending, ledger, ARGS, "call_2") == "booked"
+
+
+@pytest.mark.asyncio
+async def test_retry_allowed_notice_does_not_ask_the_llm_to_pass_a_key(tmp_path):
+    """Found live: told to 'pass idempotency key X', the model added an idempotency_key argument the
+    tool does not take, and the call crashed. The app passes the key from the record, not the LLM."""
+    async def lookup(key, args):
+        return "not_found"
+
+    continuity, _ = await drop_then_resume(tmp_path, hook=lookup, retry_on_not_found=True)
+    _, _, ctx = await resume(continuity)
+    (notice,) = notices(ctx)
+    assert "idemp:" not in notice and "passing idempotency key" not in notice
+    assert "Do not add any extra argument" in notice

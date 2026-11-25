@@ -118,7 +118,7 @@ async def test_not_found_allows_exactly_one_retry_with_same_key(tmp_path):
     registry, notices = await _resume(continuity)
 
     assert registry.records[key]["status"] == RETRY_ALLOWED
-    assert "did NOT happen" in notices[0] and key in notices[0]
+    assert "did NOT happen" in notices[0] and key not in notices[0]  # the app passes the key, not the LLM
 
     # First re-call (new tool_call_id): allowed, same key, now pending again.
     is_dup, entry = continuity.check_tool_idempotency(registry, "book_appointment", ARGS, tool_call_id="call_2")

@@ -35,21 +35,20 @@ Loss is 0 by construction: the booking always commits. It becomes measurable onl
 
 ## Steering the caller to a different slot
 
-Rater labels for all 78, rubric in `spikes/gold/RUBRIC.md`. The LLM steering judge has labelled only
-insist/none (20/20) and 3 ask_status/none closings so far (daily token cap).
+Judge (same model, temperature 0) and second rater both labelled all 78; rubric in `spikes/gold/RUBRIC.md`.
 
-| Caller script | Resolver | Steers, rater | Steers, judge |
-|---|---|---|---|
-| insist | none | 6/20 (0.15-0.52) | 6/20 (0.15-0.52) |
-| insist | unknown | 11/20 (0.34-0.74) | not judged yet |
-| ask_status | none | 6/18 (0.16-0.56) | 3 of 18 judged |
-| ask_status | unknown | 19/20 (0.76-0.99) | not judged yet |
-| pooled | none | 12/38 (0.19-0.47) | |
-| pooled | unknown | 30/40 (0.60-0.86) | |
+| Caller script | Resolver | Steers, judge | Steers, rater | Judge agrees with rater |
+|---|---|---|---|---|
+| insist | none | 6/20 (0.15-0.52) | 6/20 (0.15-0.52) | 20/20 (0.84-1.00) |
+| insist | unknown | 11/20 (0.34-0.74) | 11/20 (0.34-0.74) | 20/20 (0.84-1.00) |
+| ask_status | none | 6/18 (0.16-0.56) | 6/18 (0.16-0.56) | 18/18 (0.82-1.00) |
+| ask_status | unknown | 19/20 (0.76-0.99) | 19/20 (0.76-0.99) | 20/20 (0.84-1.00) |
+| pooled | none | 12/38 (0.19-0.47) | 12/38 | 38/38 |
+| pooled | unknown | 30/40 (0.60-0.86) | 30/40 | 40/40 |
 
 The `unknown` notice explicitly forbids suggesting a different slot, yet steering rises. Pooled, and within
-ask_status, those intervals do not overlap either. This rests on the second rater's labels until a human
-confirms them.
+ask_status, those intervals do not overlap. The steering judge agrees with the second rater on 78/78, unlike the
+claim judge (72/78). The rater is still Claude, not a human (see below).
 
 ## Judge validation (gold-set approach, as in dbeval)
 
@@ -128,8 +127,7 @@ Trials now record utterances only; judging is deferred to `--rescore` so the age
 (`--judge-during-run` restores the old behaviour). Agent-only cost is about 5,300 tokens a trial (the judges were ~1,050 of the 6,350), so deferring buys ~16%: about 37 trials per 200k window instead of ~31. Order for the next
 token window:
 
-1. The three steering rescores (`--rescore` on `phase1b_results_ask_status.json`, `_insist_unknown.json`,
-   `_ask_status_unknown.json`), so steering gets a judge-vs-rater comparison.
+1. ~~The three steering rescores~~ done: judge agrees with the rater on 78/78 (table above).
 2. `--first-booking not_committed --resolver not_committed`, insist, **n=20**: lookup 404, one permitted retry.
 3. `--first-booking not_committed --pending-timeout 0`, insist, n=20: the fix with no resolver (`UNRESOLVED`, ask the
    caller). Timeout 0 means any record still pending at resume is past it; in the spike the drop is the only reason a

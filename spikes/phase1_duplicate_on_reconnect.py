@@ -135,6 +135,10 @@ JUDGE_PROMPT = (
 USAGE = {"tokens": 0, "requests": 0}  # trials run one at a time, so a process-wide counter is enough
 
 
+class HarnessError(Exception):
+    """The trial crashed in our code (tool handler), not in the API: stop the batch."""
+
+
 class RateLimited(Exception):
     def __init__(self, retry_after_s, detail):
         super().__init__(detail)
@@ -402,6 +406,11 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
         for e in errors:
             if is_rate_limit(e):
                 raise RateLimited(retry_after_from(e), redact(e)[:400])
+        for e in errors:
+            if "Error executing function call" in str(e):
+                # The tool handler raised (e.g. the model passed an argument the tool does not take).
+                # Not a transient API error: retrying would burn tokens on the same crash.
+                raise HarnessError(redact(e)[:400])
         if errors:
             raise RateLimited(30.0, redact(errors[0])[:400])  # other API error: short back-off
 
@@ -738,6 +747,12 @@ async def main():
                     r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts + 1}", a.turns, a.resolver, a.first_booking)
                     if r["valid"] and a.judge_during_run:
                         await annotate(a.model, r)
+                except HarnessError as e:
+                    infra_events.append({"condition": cond, "index": i, "t": time.time(), "kind": "harness_error",
+                                         "detail": str(e)})
+                    save()
+                    stopped = f"harness error (not a rate limit, not data): {e}"
+                    break
                 except RateLimited as e:
                     infra_events.append({"condition": cond, "index": i, "t": time.time(),
                                          "retry_after_s": e.retry_after_s, "detail": redact(e)})

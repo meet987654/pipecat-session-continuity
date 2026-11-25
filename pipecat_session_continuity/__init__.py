@@ -345,7 +345,8 @@ class SessionContinuity:
                             "content": (
                                 f"[System Notice: The connection dropped while executing the tool '{tool_name}'{args_desc}. "
                                 f"A status check confirmed that this action did NOT happen. You may call '{tool_name}' once more "
-                                f"with the same arguments, passing idempotency key '{idemp_key}'. Do not retry more than once.]"
+                                f"with exactly the same arguments. Do not add any extra argument (the app reuses the original "
+                                f"idempotency key itself). Do not retry more than once.]"
                             )
                         }
                         context.add_message(sys_msg)
