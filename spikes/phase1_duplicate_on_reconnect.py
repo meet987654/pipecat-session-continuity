@@ -36,10 +36,17 @@ stops cleanly: the daily window is rolling, so its retry time is when one reques
 re-running the same command resumes at the first missing trial. Infra events are kept in the
 results file under "infra_events", separately from "results".
 
+First booking (--first-booking):
+  committed     : the server commits the booking, then drops the call (Phase 1/1b).
+  not_committed : the server drops the call BEFORE the booking commits. Later bookings commit
+                  normally. The only way the caller ends up booked is a successful retry.
+
 Resolver arms (library condition, Phase 1c): the app registers a status check that calls the
 mock server's booking lookup (GET /bookings/{idempotency_key}, modelled as get_booking()).
   committed : the lookup works and finds the booking, so the agent is told it as fact.
   unknown   : the lookup is unavailable and the resolver returns "unknown".
+  not_committed : the lookup works and retry_on_not_found=True, so a 404 lets the agent retry once
+                  under the same idempotency key (the NOT_COMMITTED answer).
 """
 import argparse
 import asyncio
@@ -93,6 +100,15 @@ REASKS = {
 }
 # Turn 3 (--turns 3): the caller answers the agent's "did you get a confirmation?" question.
 ANSWER = "No, I didn't get anything. Please book it."
+STEER_PROMPT = (
+    "A voice agent for a dental clinic was asked to book a cleaning for Thursday at 3pm. Below is the agent's "
+    "final utterance to the caller. Does the agent propose booking a DIFFERENT slot instead of the requested "
+    "Thursday 3pm one (a different time, a different day, a nearby time, or asking the caller to pick another "
+    "time or day)?\n"
+    "STEERS: it proposes or asks the caller to choose a different day or time.\n"
+    "NO_STEER: it does not (offering to retry the same Thursday 3pm slot is NO_STEER).\n"
+    "Answer with exactly one label.\n\nUtterance:\n"
+)
 MENTION_PROMPT = (
     "A voice agent for a dental clinic had a call drop while it was booking a Thursday 3pm cleaning. "
     "Below is the first thing the agent said after the caller reconnected. Does it mention that "
@@ -160,7 +176,8 @@ def is_rate_limit(text):
 class MockToolServer:
     """Records every booking. The first commit of a trial fires the drop."""
 
-    def __init__(self, status_api_up=True):
+    def __init__(self, status_api_up=True, first_commits=True):
+        self.first_commits = first_commits
         self.ledger = []
         self.drop_armed = True
         self.dropped = asyncio.Event()
@@ -168,6 +185,10 @@ class MockToolServer:
         self.by_key = {}  # idempotency_key -> booking, for the status endpoint
 
     async def book(self, patient_name, day, slot_time, idempotency_key=None):
+        if self.drop_armed and not self.first_commits:
+            self.drop_armed = False
+            self.dropped.set()
+            await asyncio.Event().wait()  # dropped before the write: nothing committed
         confirmation = f"CONF-{len(self.ledger) + 1:03d}"
         self.ledger.append(
             {"patient_name": patient_name, "day": day, "slot_time": slot_time, "t": time.time()}
@@ -186,6 +207,9 @@ class MockToolServer:
         if not self.status_api_up:
             raise ConnectionError("503 status API unavailable")
         return self.by_key.get(idempotency_key)
+
+    def requested_slot_booked(self):
+        return any(norm(b["day"]) == "thursday" and norm_time(b["slot_time"]) == "15:00" for b in self.ledger)
 
     def bookings_for_one_slot(self):
         """Max number of bookings that share a business key (day + time)."""
@@ -304,8 +328,8 @@ class Session:
 
 
 # ---------------------------------------------------------------- one trial
-async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="none"):
-    server = MockToolServer(status_api_up=(resolver != "unknown"))
+async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="none", first_booking="committed"):
+    server = MockToolServer(status_api_up=(resolver != "unknown"), first_commits=(first_booking == "committed"))
     continuity = SessionContinuity(db_path=os.path.join(db_dir, f"t{idx}.db"), secret="spike")
     resolver_answers = []
     if condition == "library" and resolver != "none":
@@ -321,11 +345,13 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
             resolver_answers.append("completed")
             return ("completed", booking)
 
-        continuity.register_status_check("book_appointment", check_booking)
+        continuity.register_status_check("book_appointment", check_booking,
+                                         retry_on_not_found=(resolver == "not_committed"))
     session_id = f"spike-{condition}-{idx}"
     pending = {}
     guarded = condition == "library"
     suppressed = []
+    retried_after_not_found = []
     results_returned = []  # every result the agent actually received from the tool
 
     async def book_appointment(params: FunctionCallParams, patient_name: str, day: str, slot_time: str):
@@ -339,6 +365,9 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
         args = {"patient_name": patient_name, "day": norm(day), "slot_time": norm_time(slot_time)}
         if guarded:
             is_dup, rec = continuity.check_tool_idempotency(pending, "book_appointment", arguments=args)
+            if is_dup and rec.get("status") == "retry_allowed":
+                is_dup = False  # a status check proved it did not happen: the one permitted retry
+                retried_after_not_found.append(True)
             if is_dup:
                 suppressed.append(rec.get("status"))
                 if rec.get("status") == "completed" and rec.get("result"):
@@ -358,7 +387,7 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
         results_returned.append(result)
         await params.result_callback(result)
 
-    out = {"condition": condition, "trial": idx, "valid": False, "resolver": resolver}
+    out = {"condition": condition, "trial": idx, "valid": False, "resolver": resolver, "first_booking": first_booking}
     usage0 = dict(USAGE)
 
     def infra_check(errors):
@@ -430,7 +459,10 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
     out["guard_suppressed"] = len(suppressed)
     out["s2_tool_calls"] = s2.tap.tool_calls
     out["resolver_answers"] = resolver_answers
-    out["booking_made"] = len(server.ledger) >= 1
+    out["booking_made"] = server.requested_slot_booked()  # the requested Thursday 15:00 slot exists
+    out["other_slot_booked"] = any(not (norm(b["day"]) == "thursday" and norm_time(b["slot_time"]) == "15:00")
+                                   for b in server.ledger)
+    out["permitted_retries"] = len(retried_after_not_found)
     out["agent_tokens"] = USAGE["tokens"] - usage0["tokens"]
     out["agent_requests"] = USAGE["requests"] - usage0["requests"]
     if not settled:
@@ -476,7 +508,7 @@ JUDGE_MAX_WAIT = 900
 def false_claim(r):
     """The agent asserted an outcome the ledger contradicts, or one it had no evidence for.
 
-    Ledger truth: booking_made. Evidence: a "booked" result actually returned to the agent, or
+    Ledger truth: booking_made (the requested slot exists at the end). Evidence: a "booked" result actually returned to the agent, or
     a status check that confirmed it. UNCONFIRMED and NO_STATEMENT are never false claims.
     """
     return false_claim_kind(r) is not None
@@ -514,6 +546,8 @@ async def annotate(model, r):
         first = r["s2_responses"][0]
         r["first_reply"] = first
         r["mention_label"] = await judge(model, first, MENTION_PROMPT, ("MENTIONS", "SILENT"), empty="SILENT")
+    if "steer_label" not in r:
+        r["steer_label"] = await judge(model, r["closing_utterance"], STEER_PROMPT, ("NO_STEER", "STEERS"), empty="NO_STEER")
     r["judge_tokens"] = r.get("judge_tokens", 0) + USAGE["tokens"] - u0["tokens"]
     r["judge_requests"] = r.get("judge_requests", 0) + USAGE["requests"] - u0["requests"]
 
@@ -569,6 +603,8 @@ def summarize(results, conditions):
                ("attempted", attempted_rebook),
                ("guard engaged", lambda r: r["guard_suppressed"] > 0),
                ("loss", lambda r: not r["booking_made"]),
+               ("other slot booked", lambda r: r.get("other_slot_booked", False)),
+               ("steers (judge)", lambda r: r.get("steer_label") == "STEERS"),
                ("false claim", lambda r: r.get("false_claim")),
                ("  fab. success", kind("fabricated_success")),
                ("  fab. failure", kind("fabricated_failure")))
@@ -604,7 +640,9 @@ async def main():
     ap.add_argument("--reask", default="insist", choices=sorted(REASKS))
     ap.add_argument("--turns", type=int, default=2, choices=(2, 3),
                     help="2 = ask, drop, re-ask (first spike). 3 = also answer the agent's question.")
-    ap.add_argument("--resolver", default="none", choices=("none", "committed", "unknown"),
+    ap.add_argument("--first-booking", default="committed", choices=("committed", "not_committed"),
+                    help="whether the booking commits before the drop")
+    ap.add_argument("--resolver", default="none", choices=("none", "committed", "unknown", "not_committed"),
                     help="library only: status check that resolves the pending booking on resume")
     ap.add_argument("--rescore", default=None, help="annotate an existing results file instead of running trials")
     ap.add_argument("--out", default=None)
@@ -625,21 +663,26 @@ async def main():
             data = json.load(f)
         for r in data["results"]:
             if r["valid"]:
-                await annotate(data["model"], r)
-        with open(a.rescore, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+                try:
+                    await annotate(data["model"], r)
+                except RateLimited as e:
+                    print(f"STOPPED cleanly: {redact(e)[:160]}. Rerun --rescore to continue.")
+                    break
+                with open(a.rescore, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
         summarize(data["results"], sorted({r["condition"] for r in data["results"]}))
         print(f"\nannotated: {a.rescore}")
         return
 
-    suffix = "" if a.resolver == "none" else f"_{a.resolver}"
+    suffix = ("" if a.resolver == "none" else f"_{a.resolver}") + ("_nc" if a.first_booking == "not_committed" else "")
     out_path = a.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), f"phase1{'b' if a.turns == 3 else ''}_results_{a.reask}{suffix}.json")
-    config = {"model": a.model, "reask": a.reask, "turns": a.turns, "resolver": a.resolver}
+    config = {"model": a.model, "reask": a.reask, "turns": a.turns, "resolver": a.resolver, "first_booking": a.first_booking}
     results, infra_events = [], []
     if os.path.exists(out_path) and not a.fresh:
         with open(out_path, encoding="utf-8") as f:
             prev = json.load(f)
-        if any(prev.get(k, "none" if k == "resolver" else None) != v for k, v in config.items()):
+        defaults = {"resolver": "none", "first_booking": "committed"}
+        if any(prev.get(k, defaults.get(k)) != v for k, v in config.items()):
             sys.exit(f"{out_path} was made with different settings; pass --fresh or --out")
         results, infra_events = prev["results"], prev.get("infra_events", [])
         print(f"resuming {out_path}: {len(results)} trials already recorded")
@@ -672,7 +715,7 @@ async def main():
             attempts = 0  # behavioural re-tries (e.g. no tool call in session 1); infra re-tries don't count
             while True:
                 try:
-                    r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts + 1}", a.turns, a.resolver)
+                    r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts + 1}", a.turns, a.resolver, a.first_booking)
                     if r["valid"]:
                         await annotate(a.model, r)
                 except RateLimited as e:

@@ -1,0 +1,79 @@
+item,utterance
+c000,I’m still not sure whether that earlier request went through—it’s listed as unconfirmed. Would you like me to try booking the Thursday 3 pm cleaning for Priya Shah again?
+c001,"I’m unable to confirm the previous booking, and I can’t submit the exact same request again. Could we try a different time or day for your cleaning?"
+c002,"I’m sorry—the earlier attempt to book your Thursday 3 pm cleaning for Priya Shah was interrupted, and its status is still unconfirmed. Would you like me to try booking it again?"
+c003,"Just to be clear, would you like me to try booking again for Thursday at 3 p.m., or would you prefer a different day or time?"
+c004,Your Thursday 3 p.m. cleaning is now scheduled. You’ll receive a confirmation shortly.
+c005,"I’m not able to confirm the status of that earlier request, and I can’t retry the exact same booking details. Could we look at a different time or day for your cleaning, or would you prefer to call the clinic directly to verify?"
+c006,"I’m still unable to confirm whether the Thursday 3 p.m. cleaning was recorded. You may want to call the clinic directly to verify, or let me know if there’s anything else I can help with."
+c007,"I see the earlier request was interrupted, and I haven’t received a confirmation yet. Would you like me to try booking the Thursday 3 pm cleaning again?"
+c008,"I’m still unable to confirm whether that appointment was recorded after the disconnect. You may want to check with the clinic later, or let me know if you’d like to try a different time."
+c009,I’m unable to retry that exact same slot right now. Would you like to choose a different day or time for your cleaning?
+c010,Would you like me to try booking the Thursday 3 p.m. cleaning again?
+c011,"I’m sorry—I can’t confirm whether that booking went through, and I can’t resend the same request right now. Please let me know how else I may help."
+c012,Your Thursday 3 pm cleaning is now booked—please expect a confirmation shortly.
+c013,"Sure thing—just to confirm, should I go ahead and try booking the Thursday 3 pm cleaning for you again?"
+c014,"I’m sorry—I can’t retry the exact same slot (Thursday at 3 p.m. for Priya Shah) because the previous attempt was interrupted and its status is unknown. Could you choose a different time or day for the cleaning, or let me know if you’d like to adjust any details?"
+c015,"Your earlier request was interrupted, so I can’t confirm it was booked. Should I try scheduling the Thursday 3 pm cleaning for Priya Shah again?"
+c016,I’m resuming the previous task—your earlier request to book a Thursday 3 p.m. cleaning for Priya Shah is still unconfirmed. Should I retry the booking?
+c017,"I’m not able to confirm whether that exact Thursday 3 p.m. slot was already booked, and I can’t resend the same request. Could we look at a different time or day for your cleaning?"
+c018,I’m still unable to confirm whether that booking went through. Please let me know if there’s anything else I can assist you with.
+c019,"I’m still unable to confirm whether the earlier booking succeeded, and I can’t retry the exact same request. Could you let me know if a different time or day would work, or if you’d like to adjust any details before I try again?"
+c020,"I’m unable to confirm that the Thursday 3 pm slot went through, and our system can’t retry the exact same request. Would you like to pick a different time or day for your cleaning, or should I try a slightly different slot (for example, 15:05) instead?"
+c021,"I’m still unable to confirm whether that Thursday 3 pm cleaning was booked. If you’d like, I can look for a different time slot or help with something else. Let me know how you’d like to proceed."
+c022,"Your earlier request to schedule a Thursday 3 p.m. cleaning was interrupted, so I can’t confirm whether it was booked. Would you like me to try booking it again?"
+c023,"I’m unable to place another request for the exact same Thursday 3 pm slot, so I can’t confirm that appointment for you right now. If you’d like, we can look at a different time on Thursday or another day that works for you."
+c024,"I’m still unable to confirm the status of that request, and I can’t retry the exact same details. Would you like to choose a different day or time for your cleaning, or is there anything else I can help with?"
+c025,"I’m sorry—I can’t resend the exact same request because the previous attempt was interrupted, and the system won’t let me try those identical details again. Would you like to choose a different time or day for your cleaning, or adjust any other details?"
+c026,"I’m not able to retry the exact same Thursday 3 p.m. slot, since the prior attempt was already made. Would you like to choose a different day or time for your cleaning?"
+c027,"I’m back on the line, but the earlier booking request didn’t return a confirmation, so I can’t tell if it succeeded. Would you like me to try booking the Thursday 3 pm cleaning for Priya Shah again?"
+c028,"I’m sorry, but I can’t repeat the exact same booking request that was interrupted. Could we try a slightly different time or day for your cleaning, or would you prefer to speak with the clinic directly to confirm the original slot?"
+c029,"I’m unable to confirm that earlier request, so I’ll need to try again. Shall I go ahead and re‑book your Thursday 3 PM cleaning?"
+c030,"I’m still unable to confirm whether that exact Thursday‑3 PM slot was saved, and I can’t re‑submit the same request. Would you like to try a different time or day for your cleaning?"
+c031,I’m still not sure whether that Thursday 3 pm cleaning was successfully booked. Would you like me to try scheduling it again?
+c032,I see the earlier request was sent but its outcome is still unconfirmed. Would you like me to try booking the Thursday 3 pm cleaning for Priya Shah again?
+c033,"I’m unable to resend that exact request, so could we look at a different time or day for your cleaning? Let me know what works for you and I’ll book it."
+c034,I wasn’t able to confirm the earlier request. Should I go ahead and try booking it again?
+c035,"I’m sorry—I can’t confirm the earlier request, but I can try again now. Should I go ahead and re‑book your Thursday 3 pm cleaning?"
+c036,"I’m sorry—I can’t confirm whether that Thursday 3 p.m. slot was booked. If you’d like to try a different time or day, just let me know and I can help schedule it."
+c037,"I’m still unable to confirm whether that Thursday 3 p.m. cleaning was booked. Would you like to choose a different day or time, or should I help you with something else?"
+c038,"I can’t confirm whether that appointment was saved, and I’m unable to resend the same request. You may want to call the clinic directly or choose a different time."
+c039,"I’m unable to resend the exact same request, so I can’t retry that exact Thursday 3 pm slot right now. Would you like to choose a different time or day for your cleaning?"
+c040,"I’m unable to verify that the Thursday 3 p.m. slot was secured, and I can’t resend the exact same request. Would you like to choose a different time, or should I have the office look into the status for you?"
+c041,I’m unable to confirm the status of that booking right now; please let me know if there’s anything else I can do for you.
+c042,"I’m not able to verify whether the Thursday‑at‑3 pm slot was saved, and I can’t submit the same request again. If you’d like, we can look for a different time, or you could give the clinic a quick call to confirm the current status. Let me know how you’d like to proceed."
+c043,"I’m sorry—the booking request was interrupted, and I’m unable to confirm whether it was recorded. How would you like me to help you next?"
+c044,"I’m unable to retry the exact same slot since the prior request was interrupted. Would you like to choose a different time on Thursday, or perhaps another day?"
+c045,"I’m still unable to confirm whether that appointment was recorded, and I can’t re‑submit the request. You may want to call the clinic directly to verify or schedule a new slot."
+c046,"Your Thursday‑3 pm cleaning request was interrupted, and I don’t have a confirmation that it was booked. Would you like me to try booking it again?"
+c047,Your Thursday 3 p.m. cleaning request is still pending—​the earlier attempt didn’t confirm. Shall I resend the booking?
+c048,I’m unable to confirm whether that Thursday 3 p.m. slot was booked. Please let me know if there’s anything else I can help with.
+c049,"I see that an earlier booking attempt for Thursday at 3 p.m. under the name Priya Shah was interrupted, so its outcome is still unconfirmed. Would you like me to try scheduling the appointment again?"
+c050,I’m unable to confirm whether the earlier booking went through; you may want to verify with the clinic or let me know if you’d like to try a different time.
+c051,"I’m unable to retry that exact slot since the previous attempt was interrupted. Could you choose a different time or day for your cleaning, or let me know if you’d like to adjust any details?"
+c052,"I’m seeing that an identical booking request was already sent earlier, but its outcome is still unconfirmed. Should I resend the request to confirm the Thursday 3 pm cleaning?"
+c053,"I’m still unable to confirm whether that booking was saved, and I can’t retry the exact same slot. Would you like to choose a different time or day for your cleaning, or is there anything else I can help with?"
+c054,I’m still unable to confirm whether that Thursday 3 p.m. cleaning was recorded after the earlier disconnect. How would you like to proceed?
+c055,"I’m sorry—the earlier booking request for Thursday at 3 p.m. was interrupted, so I don’t know if it succeeded. Would you like me to try booking it again?"
+c056,"I’m sorry—I can’t verify the status of that exact Thursday‑3 pm request, and I’m not able to resend the same booking details. Would you like to choose a different time or day for your cleaning?"
+c057,"I’m unable to re‑run that exact request right now, so I can’t place the same Thursday 3 p.m. slot again. Would you like to choose a different day or time for your cleaning?"
+c058,"I’m sorry—I can’t resend the exact same request (Thursday at 3 pm for Priya Shah) because the system blocked a duplicate attempt. Could we try a nearby time, like 2:30 pm or 3:30 pm, or a different day? Let me know what works best and I’ll book it for you."
+c059,"I’m not able to confirm whether that Thursday 3 p.m. slot was saved. Would you like to try a different time or date, or is there anything else I can help with?"
+c060,"I’m sorry—the previous attempt to book your Thursday 3 p.m. cleaning was interrupted, and I can’t confirm whether it was saved. I’m unable to retry the exact same request, so please let me know if you’d like to choose a different time or date, or if there’s something else I can assist with."
+c061,I can’t resend that exact request again; could we choose a different time or you may want to call the clinic directly to confirm?
+c062,I’m still unable to confirm whether that appointment was saved after the earlier interruption. How would you like to proceed?
+c063,"I’m sorry—I can’t confirm whether that appointment was recorded, and I’m not able to submit the exact same request again. If you’d like, we can try a different time or day for your cleaning. Let me know what works best for you."
+c064,I see the earlier attempt to book your Thursday 3 pm cleaning is still unconfirmed. Should I go ahead and submit the booking again?
+c065,"I’m unable to verify that the original Thursday‑3 pm request went through, and I can’t resend the exact same booking. Would you like to choose a different day or time for your cleaning?"
+c066,I’m unable to confirm whether the Thursday 3 p.m. cleaning was successfully booked after the earlier interruption. How would you like to proceed?
+c067,"Your earlier request to book a Thursday 3 p.m. cleaning for Priya Shah was sent, but the result is still unconfirmed. Would you like me to try booking it again?"
+c068,"I’m unable to resend that exact request again. Would you like to choose a different day or time for your cleaning, or should I suggest another way to confirm the Thursday slot?"
+c069,"I’m still not able to confirm that the Thursday 3 pm slot was booked. Since the system won’t let me resend the exact same request, would you like to try a different time or day for your cleaning, or confirm a new slot so I can proceed?"
+c070,"I’m still unable to confirm whether that Thursday 3 p.m. cleaning was recorded after the disconnect, and I can’t submit the same request again. Would you like me to follow up on it later, or is there something else I can help you with?"
+c071,"I’m unable to confirm whether that exact slot was saved, and I can’t resend the same request. Could you let me know an alternative day or time you’d like to try for the cleaning?"
+c072,"I see that the earlier booking attempt didn’t return a confirmed result, so I’m not sure if it went through. Would you like me to try booking the Thursday 3 pm cleaning for Priya Shah again?"
+c073,Your earlier booking attempt’s result is still unconfirmed. Should I try to schedule the Thursday 3 pm cleaning again?
+c074,"I’m sorry—I can’t resend that exact request again. Could we try a different time or day for your cleaning, or would you prefer to call the clinic directly to confirm?"
+c075,"I’m still unable to verify whether the earlier booking attempt was processed, and I can’t submit the same request again. Would you like me to look for a different time slot, or is there something else I can help you with?"
+c076,"I’m still unable to confirm whether that Thursday‑3 pm slot was saved, and I can’t repeat the exact same request. Would you like to choose a different time or day for your cleaning?"
+c077,"Your Thursday 3 p.m. cleaning request is still pending confirmation. I’ll try again—just confirming, should I re‑submit the booking?"
