@@ -83,6 +83,24 @@ The hook returns `("completed", result)` (or `{"status": "completed", "result": 
 
 Tools without a hook behave exactly as before. Hooks run concurrently on resume. See `examples/06_status_check_hook.py`.
 
+#### When the call never reached the backend: pending timeouts
+A record also stays `pending` when the drop happened *before* the backend performed the action. In 0.3.0 that record
+never expires, and with no hook every identical retry is blocked for the rest of the session (**known issue in
+0.3.0**). Set a per-tool pending timeout:
+
+```python
+continuity = SessionContinuity(pending_timeouts={"book_appointment": 30})   # or continuity.set_pending_timeout(...)
+```
+
+On resume, a record pending for longer than its timeout (measured from its last attempt) is first given to the tool's
+status check, if one is registered. If there is none, or it cannot answer, the record becomes `UNRESOLVED`
+(`rec["unresolved_reason"]` is `no_status_check` or `status_check_inconclusive`). The LLM is told the outcome is unknown
+and to ask the caller whether to try the same request again with the same details (it is not told "do not call this
+tool again"), and `check_tool_idempotency` returns `is_dup=False` for that one identical retry. Choose a timeout longer
+than the tool can take to land. Without a status check, a retry after the timeout is the caller's guess: if the
+original did go through and your backend ignores the idempotency key, it can duplicate. With no timeout set, the
+0.3.0 behaviour is unchanged, and a warning is logged the first time a tool with no status check is guarded.
+
 ### 2. In-Session Duplicate Delivery (At-Least-Once Delivery)
 Checkpoints happen sequentially at the end of each turn. If a server dies *while* the TTS audio is streaming to the user but *before* the checkpoint runs, the LLM state is rolled back to the previous turn. Upon reconnect, the LLM will re-generate the answer. This is an inherent trait of optimistic, asynchronous checkpointing (At-Least-Once delivery).
 

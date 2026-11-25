@@ -182,11 +182,29 @@ Features automatic HMAC session bootstrapping, credential persistence (`localSto
 ## Full API Documentation
 For full installation details, API documentation, and configuration options, see the **[Full Documentation](pipecat_session_continuity/README.md)**.
 
+## Known issue in 0.3.0: a drop before the commit can block the retry for good
+
+If the connection drops after a guarded tool call is recorded but **before your backend performs it**, the record
+stays `pending` forever. With no status check registered, every identical retry is blocked for the rest of the
+session, even though the action never happened, so the caller's request is silently lost. In an LLM trial (Phase 1b
+spike) the booking was lost in 5 of 5 calls, and the "do not call this tool again" notice also pushed the agent to
+offer a different slot instead.
+
+0.3.0 has no setting that avoids this. If you are on 0.3.0, register a status check for every guarded tool
+(`register_status_check`, with `retry_on_not_found=True` if your backend honours idempotency keys). The next release
+adds a per-tool pending timeout (`SessionContinuity(pending_timeouts={"book_appointment": 30})` or
+`set_pending_timeout`): once it passes, the record goes to the status check if there is one, and otherwise becomes
+`UNRESOLVED`, so the agent asks the caller whether to retry the same request and one identical retry is allowed.
+Without a timeout the 0.3.0 behaviour is unchanged, and a warning is logged the first time a tool with no status
+check is guarded.
+
 ## Current Limitations
 This library currently has a few intentional boundaries:
 - It only persists the `LLMContext` (messages array), pending tool calls, and user/dialog metadata. It does not attempt to serialize the state of other pipeline processors (like VAD state or STT buffers).
 - While deterministic tool keys and system prompt injection prevent duplicate tool execution at the agent boundary, non-deterministic arguments (e.g. dynamic current timestamps generated inside LLM argument JSON) may generate distinct hashes unless a client-side idempotency token is supplied.
 - **Lost replies stay "unconfirmed" unless you register a status check.** If a tool's side effect reached your backend but the reply was lost, the library only knows the call was `pending`. It prevents a second execution and tells the LLM to ask the caller to confirm. It cannot learn what actually happened by itself. Register a hook with `continuity.register_status_check(tool_name, fn)` to resolve it on resume (a `not_found` answer is only acted on if you also pass `retry_on_not_found=True`) (see `examples/06_status_check_hook.py`). Without one, nothing is verified.
+- **A pending record has no expiry unless you set one.** Without a status check or `pending_timeouts`, a call interrupted before it reached your backend blocks identical retries for the life of the session (see the known issue above). With a timeout and no status check, the retry is the caller's decision, and if the original did go through and your backend ignores idempotency keys, it can duplicate.
+- **A retry with different arguments is a new action.** Another time slot, or a differently spelled name, gets a new idempotency key, so the guard cannot catch a second booking made that way.
 - **Notices are instructions to the LLM, not enforcement.** Duplicate execution is blocked only where your tool wrapper calls `check_tool_idempotency`; whether the model words its reply correctly is up to the model. `benchmarks/measure_pending_notice_claims.py` measures this for a model of your choice (not run in CI).
 - A status-check hook adds at most `status_check_timeout_seconds` (default 1 s; lower means a slow status API falls back to "unconfirmed" more often, higher means a slower resume) to a resume. Hooks run concurrently, and with an instant hook the measured overhead was under 1 ms (`benchmarks/measure_status_check_latency.py`).
 

@@ -24,8 +24,10 @@ tool handler is unmodified apart from the library condition's guard.
 Usage:
   .venv/Scripts/python spikes/phase1_duplicate_on_reconnect.py --trials 20
   flags: --conditions stock,naive,library  --model openai/gpt-oss-120b  --reask insist|ask_status
-         --turns 2|3  --resolver none|committed|unknown (library only)
-         --rescore FILE: add mention_label / false_claim_kind to an existing results file, no new trials
+         --turns 2|3  --resolver none|committed|unknown|not_committed (library only)
+         --first-booking committed|not_committed  --pending-timeout S (library only: set_pending_timeout)
+         --judge-during-run (default off: trials record the utterances, judging is deferred)
+         --rescore FILE: judge an existing results file (claim, mention, steer), no new trials
          --max-trials-per-run N  --daily-token-cap 200000  --daily-request-cap 1000  --max-wait 900
          --fresh (ignore an existing results file instead of resuming it)
 
@@ -328,9 +330,12 @@ class Session:
 
 
 # ---------------------------------------------------------------- one trial
-async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="none", first_booking="committed"):
+async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="none", first_booking="committed",
+                    pending_timeout=None):
     server = MockToolServer(status_api_up=(resolver != "unknown"), first_commits=(first_booking == "committed"))
     continuity = SessionContinuity(db_path=os.path.join(db_dir, f"t{idx}.db"), secret="spike")
+    if pending_timeout is not None:
+        continuity.set_pending_timeout("book_appointment", pending_timeout)
     resolver_answers = []
     if condition == "library" and resolver != "none":
         async def check_booking(idempotency_key, args):
@@ -367,7 +372,8 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
             is_dup, rec = continuity.check_tool_idempotency(pending, "book_appointment", arguments=args)
             if is_dup and rec.get("status") == "retry_allowed":
                 is_dup = False  # a status check proved it did not happen: the one permitted retry
-                retried_after_not_found.append(True)
+            if not is_dup and rec and rec.get("status") in ("retry_allowed", "unresolved"):
+                retried_after_not_found.append(rec["status"])  # unresolved: past pending_timeout, caller chose
             if is_dup:
                 suppressed.append(rec.get("status"))
                 if rec.get("status") == "completed" and rec.get("result"):
@@ -387,7 +393,8 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
         results_returned.append(result)
         await params.result_callback(result)
 
-    out = {"condition": condition, "trial": idx, "valid": False, "resolver": resolver, "first_booking": first_booking}
+    out = {"condition": condition, "trial": idx, "valid": False, "resolver": resolver, "first_booking": first_booking,
+           "pending_timeout": pending_timeout}
     usage0 = dict(USAGE)
 
     def infra_check(errors):
@@ -432,6 +439,7 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
         pending.clear()
         pending.update(pending_restored)
         out["resumed"] = is_resumed
+        out["resume_statuses"] = sorted({v.get("status") for v in pending.values() if isinstance(v, dict)})
         # resume_or_start queues a bridge message; let the agent answer it first.
         await s2.task.queue_frames([LLMMessagesAppendFrame([], run_llm=True)])
         await s2.wait_settled(0, 0, timeout=45)
@@ -566,8 +574,9 @@ def trial_index(r):
     return r["index"] if "index" in r else int(str(r["trial"]).split("-")[0])
 
 
-def per_trial_cost(spike_dir, default_tokens=3500, default_requests=8):
-    """Mean tokens and requests per valid trial from recorded results, or a default."""
+def per_trial_cost(spike_dir, default_tokens=6000, default_requests=8, include_judge=True):
+    """Mean tokens and requests per valid trial from recorded results, or a default.
+    include_judge=False: agent cost only (judging is deferred to --rescore)."""
     import glob
     rows = []
     for f in glob.glob(os.path.join(spike_dir, "phase1b_results_*.json")):
@@ -575,9 +584,10 @@ def per_trial_cost(spike_dir, default_tokens=3500, default_requests=8):
             rows += [r for r in json.load(fh)["results"] if r.get("valid") and "agent_tokens" in r]
     if not rows:
         return default_tokens, default_requests, f"defaults (no recorded usage yet: {default_tokens} tokens, {default_requests} requests)"
-    tok = sum(r["agent_tokens"] + r.get("judge_tokens", 0) for r in rows) / len(rows)
-    req = sum(r["agent_requests"] + r.get("judge_requests", 0) for r in rows) / len(rows)
-    return tok, req, f"{len(rows)} recorded trials"
+    j = 1 if include_judge else 0
+    tok = sum(r["agent_tokens"] + j * r.get("judge_tokens", 0) for r in rows) / len(rows)
+    req = sum(r["agent_requests"] + j * r.get("judge_requests", 0) for r in rows) / len(rows)
+    return tok, req, f"{len(rows)} recorded trials ({'agent + judge' if include_judge else 'agent only'})"
 
 
 def probe_remaining_requests(model):
@@ -604,6 +614,7 @@ def summarize(results, conditions):
                ("guard engaged", lambda r: r["guard_suppressed"] > 0),
                ("loss", lambda r: not r["booking_made"]),
                ("other slot booked", lambda r: r.get("other_slot_booked", False)),
+               ("permitted retry", lambda r: r.get("permitted_retries", 0) > 0),
                ("steers (judge)", lambda r: r.get("steer_label") == "STEERS"),
                ("false claim", lambda r: r.get("false_claim")),
                ("  fab. success", kind("fabricated_success")),
@@ -611,7 +622,9 @@ def summarize(results, conditions):
     for cond in conditions:
         rs = [r for r in results if r["condition"] == cond]
         v = [r for r in rs if r["valid"]]
-        print(f"\n{cond}: {len(v)} valid, {len(rs) - len(v)} invalid")
+        unjudged = sum("steer_label" not in r for r in v)
+        print(f"\n{cond}: {len(v)} valid, {len(rs) - len(v)} invalid"
+              + (f"  ({unjudged} not judged yet: judge-based rows below undercount; run --rescore)" if unjudged else ""))
         for name, fn in metrics:
             k = sum(1 for r in v if fn(r))
             lo, hi = wilson(k, len(v))
@@ -644,6 +657,10 @@ async def main():
                     help="whether the booking commits before the drop")
     ap.add_argument("--resolver", default="none", choices=("none", "committed", "unknown", "not_committed"),
                     help="library only: status check that resolves the pending booking on resume")
+    ap.add_argument("--pending-timeout", type=float, default=None,
+                    help="library only: set_pending_timeout(book_appointment, S). 0 = any pending record at resume is past it")
+    ap.add_argument("--judge-during-run", action="store_true",
+                    help="judge each trial as it finishes (default: record only; judge later with --rescore)")
     ap.add_argument("--rescore", default=None, help="annotate an existing results file instead of running trials")
     ap.add_argument("--out", default=None)
     ap.add_argument("--fresh", action="store_true", help="start over instead of resuming an existing results file")
@@ -674,14 +691,17 @@ async def main():
         print(f"\nannotated: {a.rescore}")
         return
 
-    suffix = ("" if a.resolver == "none" else f"_{a.resolver}") + ("_nc" if a.first_booking == "not_committed" else "")
+    suffix = (("" if a.resolver == "none" else f"_{a.resolver}")
+              + ("" if a.pending_timeout is None else f"_pt{a.pending_timeout:g}")
+              + ("_nc" if a.first_booking == "not_committed" else ""))
     out_path = a.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), f"phase1{'b' if a.turns == 3 else ''}_results_{a.reask}{suffix}.json")
-    config = {"model": a.model, "reask": a.reask, "turns": a.turns, "resolver": a.resolver, "first_booking": a.first_booking}
+    config = {"model": a.model, "reask": a.reask, "turns": a.turns, "resolver": a.resolver, "first_booking": a.first_booking,
+              "pending_timeout": a.pending_timeout}
     results, infra_events = [], []
     if os.path.exists(out_path) and not a.fresh:
         with open(out_path, encoding="utf-8") as f:
             prev = json.load(f)
-        defaults = {"resolver": "none", "first_booking": "committed"}
+        defaults = {"resolver": "none", "first_booking": "committed", "pending_timeout": None}
         if any(prev.get(k, defaults.get(k)) != v for k, v in config.items()):
             sys.exit(f"{out_path} was made with different settings; pass --fresh or --out")
         results, infra_events = prev["results"], prev.get("infra_events", [])
@@ -693,7 +713,7 @@ async def main():
     todo = [(c, i) for c in a.conditions.split(",") for i in range(a.trials) if not done(c, i)]
     if a.max_trials_per_run:
         todo = todo[: a.max_trials_per_run]
-    tok, req, src = per_trial_cost(os.path.dirname(out_path))
+    tok, req, src = per_trial_cost(os.path.dirname(out_path), include_judge=a.judge_during_run)
     print(f"budget: {len(todo)} trials x ~{tok:,.0f} tokens = ~{len(todo) * tok:,.0f} tokens "
           f"(daily cap {a.daily_token_cap:,}); ~{len(todo) * req:.0f} requests (daily cap {a.daily_request_cap:,}). "
           f"Per-trial cost from {src}.")
@@ -716,7 +736,7 @@ async def main():
             while True:
                 try:
                     r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts + 1}", a.turns, a.resolver, a.first_booking)
-                    if r["valid"]:
+                    if r["valid"] and a.judge_during_run:
                         await annotate(a.model, r)
                 except RateLimited as e:
                     infra_events.append({"condition": cond, "index": i, "t": time.time(),
@@ -749,9 +769,11 @@ async def main():
 
     if stopped:
         print(f"\nSTOPPED cleanly: {stopped}. {len(results)} trials saved; rerun the same command to resume.")
-    print(f"\nmodel={a.model}  reask={a.reask}  turns={a.turns}  resolver={a.resolver}")
+    print(f"\nmodel={a.model}  reask={a.reask}  turns={a.turns}  resolver={a.resolver}  pending_timeout={a.pending_timeout}")
     summarize(results, a.conditions.split(","))
     print(f"\nper-trial detail: {out_path}")
+    if any(r.get("valid") and "steer_label" not in r for r in results):
+        print(f"judge labels missing for some trials: judge them with --rescore {out_path}")
 
 
 if __name__ == "__main__":

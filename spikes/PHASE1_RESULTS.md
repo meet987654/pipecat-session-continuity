@@ -94,11 +94,17 @@ welcome-back wording. The session TTL is refreshed by every checkpoint, so durin
 fires. With the Redis client's in-memory fallback the session TTL is ignored entirely, so a pending record
 there blocks for the life of the process.
 
-**v1 library fix, same family as fail-closed:** a pending record with no resolver must not block forever.
-Options: a per-tool `pending_timeout` after which the record becomes "ask the app" (call a fallback, or
-surface it as an explicit decision to the agent/caller), or require a status-check hook (or an explicit
-`no_resolver=True` opt-in) for any tool the guard protects. Not implemented yet: the spike measures the
-current behaviour.
+**Fixed (unreleased; known issue in 0.3.0):** per-tool `pending_timeouts` / `set_pending_timeout`. On resume, a
+record pending longer than its timeout goes to the status check if one is registered; otherwise, or if the check
+cannot answer, it becomes `UNRESOLVED`. Its notice says the outcome is unknown and asks the caller whether to retry
+the same request; it no longer says "do not call this tool again", and the guard allows one identical retry. The
+default (no timeout) is unchanged, so the baseline arms stay comparable, and a warning is logged the first time a
+tool with no status check is guarded. The tests now assert that a 30-day-old record escalates (or goes to the status
+check), and that without a timeout it still blocks and warns.
+
+Not changed: the default no-timeout "pending" notice still says "do not call this tool again". With no timeout, the
+guard still blocks the retry, so inviting one would be a promise the guard breaks. That line keeps driving steering
+on the default path; the fix is to set a timeout.
 
 ### First live trials (partial: insist, baseline, 5 of 8)
 
@@ -118,17 +124,18 @@ question is answered. No steering fix has been attempted.
 
 ## Not run yet (Groq free tier: 200k tokens/day)
 
-Order for the next token window:
+Trials now record utterances only; judging is deferred to `--rescore` so the agent trials get the window
+(`--judge-during-run` restores the old behaviour). Agent-only cost is about 5,300 tokens a trial (the judges were ~1,050 of the 6,350), so deferring buys ~16%: about 37 trials per 200k window instead of ~31. Order for the next
+token window:
 
-1. `--first-booking not_committed`, baseline (no resolver), **n=8** per caller script: enough to confirm loss is
-   near 100%, which the tests above predict.
-2. `--first-booking not_committed --resolver not_committed`, **n=20**: lookup returns 404 and
-   `retry_on_not_found=True` permits one retry under the same key. The arm that can recover the booking.
-3. The steering judge on the remaining 55 closings (`--rescore`), so steering gets a judge-vs-rater comparison.
-4. `committed` arm. The first attempt's 4 valid trials were deleted by mistake, not kept.
+1. The three steering rescores (`--rescore` on `phase1b_results_ask_status.json`, `_insist_unknown.json`,
+   `_ask_status_unknown.json`), so steering gets a judge-vs-rater comparison.
+2. `--first-booking not_committed --resolver not_committed`, insist, **n=20**: lookup 404, one permitted retry.
+3. `--first-booking not_committed --pending-timeout 0`, insist, n=20: the fix with no resolver (`UNRESOLVED`, ask the
+   caller). Timeout 0 means any record still pending at resume is past it; in the spike the drop is the only reason a
+   record is pending.
+4. Judge the new files with `--rescore`, on leftover budget.
 
-`unknown` × not_committed is deferred: by the tests above its identical retries are blocked as in the baseline.
-
-Runner: 429s are infra events, not rows; per-minute ones are waited out and per-day ones stop the batch
-cleanly. Results are checkpointed per trial and the run resumes. Tokens are recorded per trial, and a budget
-check runs before each batch.
+Deferred: finishing the not-committed baseline at n=8 (5/5 lost already, and the tests make it deterministic),
+ask_status for the new arms, `unknown` × not_committed, and the `committed` arm. The first attempt's 4 valid
+`committed` trials were deleted by mistake, not kept.
