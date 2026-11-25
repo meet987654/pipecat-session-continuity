@@ -34,6 +34,8 @@ FILES = {  # arm name -> results file
     "ask_status/none/nc": "phase1b_results_ask_status_nc.json",
     "insist/unknown/nc": "phase1b_results_insist_unknown_nc.json",
     "ask_status/unknown/nc": "phase1b_results_ask_status_unknown_nc.json",
+    "insist/not_committed/nc": "phase1b_results_insist_not_committed_nc.json",
+    "ask_status/not_committed/nc": "phase1b_results_ask_status_not_committed_nc.json",
 }
 CLAIMS = ("SAYS_BOOKED", "SAYS_NOT_BOOKED", "UNCONFIRMED", "NO_STATEMENT")
 STEERS = ("STEERS", "NO_STEER")

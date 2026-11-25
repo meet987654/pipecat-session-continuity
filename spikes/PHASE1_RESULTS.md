@@ -75,17 +75,50 @@ ask_status/unknown. With n=20 that difference in error rate is not established, 
 `unknown` arm. 2 of those 3 (c061, c074) turn on one rubric call ("call the clinic to confirm" signals
 uncertainty) that a human may reject.
 
+## Drop before commit: the guard causes the loss (deterministic, no LLM)
+
+`tests/test_pending_never_completed.py` (6 tests, pass). The tool call is recorded as pending, the connection
+drops before the backend writes, the session is checkpointed and resumed with no status hook:
+
+- An identical retry is **blocked**, every time; the ledger holds 0 bookings. That is loss, caused by the guard.
+- Ageing the record by 30 days and reconnecting 5 more times changes nothing: still pending, still blocked.
+- A retry with different arguments (16:00 instead of 15:00) gets a new key and **books**. The guard cannot see it.
+- A `not_found` hook with `retry_on_not_found=True` permits exactly one identical retry (books once, then blocks).
+  Without the flag, `not_found` still blocks.
+- The only other thing that unblocks it is the whole session expiring from storage (`ttl_seconds`, default 3600),
+  which also throws away the conversation, so the agent resumes as a fresh call with no record of the attempt.
+
+**Does a pending record ever expire or resolve on its own? No.** The registry has no TTL, timeout or
+age check. `created_at`/`updated_at` are stored and never read. `stale_threshold_minutes` only changes the
+welcome-back wording. The session TTL is refreshed by every checkpoint, so during a live call it never
+fires. With the Redis client's in-memory fallback the session TTL is ignored entirely, so a pending record
+there blocks for the life of the process.
+
+**v1 library fix, same family as fail-closed:** a pending record with no resolver must not block forever.
+Options: a per-tool `pending_timeout` after which the record becomes "ask the app" (call a fallback, or
+surface it as an explicit decision to the agent/caller), or require a status-check hook (or an explicit
+`no_resolver=True` opt-in) for any tool the guard protects. Not implemented yet: the spike measures the
+current behaviour.
+
+## Open scope question: re-booking with different arguments
+
+A second booking with different arguments (another slot, a differently spelled name) gets a new idempotency key,
+so the guard cannot catch it; steering (above) produces exactly that. Is that the library's problem (for
+example, a per-session "one booking of this kind" intent key) or the agent prompt's? Left open until the loss
+question is answered. No steering fix has been attempted.
+
 ## Not run yet (Groq free tier: 200k tokens/day)
 
-- **`--first-booking not_committed`**, baseline and `unknown`, both caller scripts. Implemented: the server
-  drops the call before writing, and `loss` = the requested Thursday 15:00 slot never booked.
-  **Prediction from the code:** loss near 20/20 in *both* arms. The checkpointed record is pending with the
-  same arguments, so the guard blocks any identical retry whether or not the agent tries; only a booking
-  with different arguments (another slot, or a differently spelled name) gets through. A difference between
-  the arms would then come from steering, not from retrying. `--resolver not_committed` (lookup 404, then
-  `retry_on_not_found=True` permits one retry under the same key) is the arm that can recover the booking.
-- The steering judge on the remaining 55 closings (`--rescore` resumes).
-- `committed` arm. The first attempt's 4 valid trials were deleted by mistake, not kept.
+Order for the next token window:
+
+1. `--first-booking not_committed`, baseline (no resolver), **n=8** per caller script: enough to confirm loss is
+   near 100%, which the tests above predict.
+2. `--first-booking not_committed --resolver not_committed`, **n=20**: lookup returns 404 and
+   `retry_on_not_found=True` permits one retry under the same key. The arm that can recover the booking.
+3. The steering judge on the remaining 55 closings (`--rescore`), so steering gets a judge-vs-rater comparison.
+4. `committed` arm. The first attempt's 4 valid trials were deleted by mistake, not kept.
+
+`unknown` × not_committed is deferred: by the tests above its identical retries are blocked as in the baseline.
 
 Runner: 429s are infra events, not rows; per-minute ones are waited out and per-day ones stop the batch
 cleanly. Results are checkpointed per trial and the run resumes. Tokens are recorded per trial, and a budget
