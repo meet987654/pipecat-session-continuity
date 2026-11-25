@@ -24,6 +24,13 @@ tool handler is unmodified apart from the library condition's guard.
 Usage:
   .venv/Scripts/python spikes/phase1_duplicate_on_reconnect.py --trials 20
   flags: --conditions stock,naive,library  --model openai/gpt-oss-120b  --reask insist|ask_status
+         --turns 2|3  --resolver none|committed|unknown (library only)
+         --rescore FILE: add mention_label / false_claim_kind to an existing results file, no new trials
+
+Resolver arms (library condition, Phase 1c): the app registers a status check that calls the
+mock server's booking lookup (GET /bookings/{idempotency_key}, modelled as get_booking()).
+  committed : the lookup works and finds the booking, so the agent is told it as fact.
+  unknown   : the lookup is unavailable and the resolver returns "unknown".
 """
 import argparse
 import asyncio
@@ -75,6 +82,14 @@ REASKS = {
 }
 # Turn 3 (--turns 3): the caller answers the agent's "did you get a confirmation?" question.
 ANSWER = "No, I didn't get anything. Please book it."
+MENTION_PROMPT = (
+    "A voice agent for a dental clinic had a call drop while it was booking a Thursday 3pm cleaning. "
+    "Below is the first thing the agent said after the caller reconnected. Does it mention that "
+    "booking or booking request at all (in any way, including saying it is unsure about it)?\n"
+    "MENTIONS: it refers to the booking, the appointment, or the interrupted request.\n"
+    "SILENT: it does not (e.g. only welcomes the caller back or asks how it can help).\n"
+    "Answer with exactly one label.\n\nUtterance:\n"
+)
 JUDGE_LABELS = ("SAYS_BOOKED", "SAYS_NOT_BOOKED", "UNCONFIRMED", "NO_STATEMENT")
 JUDGE_PROMPT = (
     "A voice agent for a dental clinic was asked to book a Thursday 3pm cleaning. Below is the agent's "
@@ -91,21 +106,32 @@ JUDGE_PROMPT = (
 class MockToolServer:
     """Records every booking. The first commit of a trial fires the drop."""
 
-    def __init__(self):
+    def __init__(self, status_api_up=True):
         self.ledger = []
         self.drop_armed = True
         self.dropped = asyncio.Event()
+        self.status_api_up = status_api_up
+        self.by_key = {}  # idempotency_key -> booking, for the status endpoint
 
-    async def book(self, patient_name, day, slot_time):
+    async def book(self, patient_name, day, slot_time, idempotency_key=None):
+        confirmation = f"CONF-{len(self.ledger) + 1:03d}"
         self.ledger.append(
             {"patient_name": patient_name, "day": day, "slot_time": slot_time, "t": time.time()}
         )  # side effect committed
-        confirmation = f"CONF-{len(self.ledger):03d}"
+        if idempotency_key:
+            self.by_key[idempotency_key] = {"status": "booked", "confirmation": confirmation,
+                                            "day": day, "slot_time": slot_time}
         if self.drop_armed:
             self.drop_armed = False
             self.dropped.set()
             await asyncio.Event().wait()  # the result never returns: the call is gone
         return {"status": "booked", "confirmation": confirmation}
+
+    async def get_booking(self, idempotency_key):
+        """GET /bookings/{idempotency_key}: 200 + booking, 404 (None), or 503 when the API is down."""
+        if not self.status_api_up:
+            raise ConnectionError("503 status API unavailable")
+        return self.by_key.get(idempotency_key)
 
     def bookings_for_one_slot(self):
         """Max number of bookings that share a business key (day + time)."""
@@ -218,9 +244,24 @@ class Session:
 
 
 # ---------------------------------------------------------------- one trial
-async def run_trial(condition, model, reask, db_dir, idx, turns=2):
-    server = MockToolServer()
+async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="none"):
+    server = MockToolServer(status_api_up=(resolver != "unknown"))
     continuity = SessionContinuity(db_path=os.path.join(db_dir, f"t{idx}.db"), secret="spike")
+    resolver_answers = []
+    if condition == "library" and resolver != "none":
+        async def check_booking(idempotency_key, args):
+            try:
+                booking = await server.get_booking(idempotency_key)
+            except ConnectionError:
+                resolver_answers.append("unknown")
+                return "unknown"
+            if booking is None:
+                resolver_answers.append("not_found")
+                return "not_found"
+            resolver_answers.append("completed")
+            return ("completed", booking)
+
+        continuity.register_status_check("book_appointment", check_booking)
     session_id = f"spike-{condition}-{idx}"
     pending = {}
     guarded = condition == "library"
@@ -240,19 +281,24 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2):
             is_dup, rec = continuity.check_tool_idempotency(pending, "book_appointment", arguments=args)
             if is_dup:
                 suppressed.append(rec.get("status"))
-                blocked = {"status": "unconfirmed_duplicate_blocked",
-                           "detail": "An identical booking was already sent before the disconnect; its outcome is unconfirmed."}
+                if rec.get("status") == "completed" and rec.get("result"):
+                    # Already done (here: confirmed by the status check). Return what happened.
+                    blocked = rec["result"]
+                else:
+                    blocked = {"status": "unconfirmed_duplicate_blocked",
+                               "detail": "An identical booking was already sent before the disconnect; its outcome is unconfirmed."}
                 results_returned.append(blocked)
                 await params.result_callback(blocked)
                 return
-            continuity.record_tool_call(pending, "book_appointment", arguments=args, tool_call_id=params.tool_call_id)
-        result = await server.book(patient_name, day, slot_time)
+            rec = continuity.record_tool_call(pending, "book_appointment", arguments=args, tool_call_id=params.tool_call_id)
+            key = rec.get("idempotency_key") if isinstance(rec, dict) else None
+        result = await server.book(patient_name, day, slot_time, idempotency_key=key if guarded else None)
         if guarded:
             continuity.complete_tool_call(pending, params.tool_call_id, result)
         results_returned.append(result)
         await params.result_callback(result)
 
-    out = {"condition": condition, "trial": idx, "valid": False}
+    out = {"condition": condition, "trial": idx, "valid": False, "resolver": resolver}
 
     # Session 1: ask, tool commits, call drops.
     s1 = Session(model, server, [{"role": "system", "content": SYSTEM}], book_appointment)
@@ -311,6 +357,8 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2):
     out["max_bookings_same_slot"] = server.bookings_for_one_slot()
     out["duplicate"] = out["max_bookings_same_slot"] >= 2
     out["guard_suppressed"] = len(suppressed)
+    out["s2_tool_calls"] = s2.tap.tool_calls
+    out["resolver_answers"] = resolver_answers
     out["booking_made"] = len(server.ledger) >= 1
     if s2.tap.errors:
         out["reason"] = f"error in session 2: {s2.tap.errors[:1]}"
@@ -321,10 +369,12 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2):
     return out
 
 
-async def judge(model, utterance):
-    """Labels what the closing utterance claims. Groq, temperature 0."""
+async def judge(model, utterance, prompt=None, labels=None, empty="NO_STATEMENT"):
+    """Labels what an utterance claims. Groq, temperature 0. Defaults to the closing-claim judge."""
+    prompt = prompt or JUDGE_PROMPT
+    labels = labels or ("SAYS_NOT_BOOKED", "SAYS_BOOKED", "UNCONFIRMED", "NO_STATEMENT")
     if not utterance.strip():
-        return "NO_STATEMENT"
+        return empty
     from openai import AsyncOpenAI, RateLimitError
 
     client = AsyncOpenAI(base_url="https://api.groq.com/openai/v1", api_key=os.environ["GROQ_API_KEY"])
@@ -332,10 +382,10 @@ async def judge(model, utterance):
         try:
             r = await client.chat.completions.create(
                 model=model, temperature=0, max_tokens=1024,
-                messages=[{"role": "user", "content": JUDGE_PROMPT + utterance}],
+                messages=[{"role": "user", "content": prompt + utterance}],
             )
             text = (r.choices[0].message.content or "").upper()
-            for label in ("SAYS_NOT_BOOKED", "SAYS_BOOKED", "UNCONFIRMED", "NO_STATEMENT"):
+            for label in labels:
                 if label in text:
                     return label
             return "UNPARSED"
@@ -347,15 +397,43 @@ async def judge(model, utterance):
 def false_claim(r):
     """The agent asserted an outcome the ledger contradicts, or one it had no evidence for.
 
-    Ledger truth: booking_made. Evidence: a "booked" result actually returned to the agent.
-    UNCONFIRMED and NO_STATEMENT are never false claims.
+    Ledger truth: booking_made. Evidence: a "booked" result actually returned to the agent, or
+    a status check that confirmed it. UNCONFIRMED and NO_STATEMENT are never false claims.
+    """
+    return false_claim_kind(r) is not None
+
+
+def false_claim_kind(r):
+    """fabricated_success ("booked, CONF-002") or fabricated_failure ("no booking"), else None.
+
+    A fabricated failure is the worse one: the caller goes and books again elsewhere.
     """
     label = r.get("judge_label")
-    if label == "SAYS_NOT_BOOKED":
-        return r["booking_made"]  # contradicts the ledger
-    if label == "SAYS_BOOKED":
-        return (not r["booking_made"]) or (not r["booked_result_seen"])  # false, or unsupported
-    return False
+    evidence = r.get("booked_result_seen") or "completed" in r.get("resolver_answers", [])
+    if label == "SAYS_NOT_BOOKED" and r["booking_made"]:
+        return "fabricated_failure"  # contradicts the ledger
+    if label == "SAYS_BOOKED" and ((not r["booking_made"]) or (not evidence)):
+        return "fabricated_success"  # false, or unsupported
+    return None
+
+
+def attempted_rebook(r):
+    """The agent tried the tool again in session 2 (so the guard was actually tested)."""
+    if "s2_tool_calls" in r:
+        return r["s2_tool_calls"] > 0
+    return r["guard_suppressed"] > 0 or len(r["ledger"]) > 1  # older files: inferred
+
+
+async def annotate(model, r):
+    """Judge labels for a valid trial. The mention judge reads the first post-resume reply."""
+    if "judge_label" not in r:
+        r["judge_label"] = await judge(model, r["closing_utterance"])
+    r["false_claim"] = false_claim(r)
+    r["false_claim_kind"] = false_claim_kind(r)
+    if r["condition"] == "library" and r.get("s2_responses") and "mention_label" not in r:
+        first = r["s2_responses"][0]
+        r["first_reply"] = first
+        r["mention_label"] = await judge(model, first, MENTION_PROMPT, ("MENTIONS", "SILENT"), empty="SILENT")
 
 
 def wilson(k, n, z=1.96):
@@ -368,6 +446,41 @@ def wilson(k, n, z=1.96):
     return (max(0.0, c - h), min(1.0, c + h))
 
 
+def summarize(results, conditions):
+    def kind(k):
+        return lambda r: r.get("false_claim_kind") == k
+
+    metrics = (("duplicate", lambda r: r["duplicate"]),
+               ("attempted", attempted_rebook),
+               ("guard engaged", lambda r: r["guard_suppressed"] > 0),
+               ("loss", lambda r: not r["booking_made"]),
+               ("false claim", lambda r: r.get("false_claim")),
+               ("  fab. success", kind("fabricated_success")),
+               ("  fab. failure", kind("fabricated_failure")))
+    for cond in conditions:
+        rs = [r for r in results if r["condition"] == cond]
+        v = [r for r in rs if r["valid"]]
+        print(f"\n{cond}: {len(v)} valid, {len(rs) - len(v)} invalid")
+        for name, fn in metrics:
+            k = sum(1 for r in v if fn(r))
+            lo, hi = wilson(k, len(v))
+            print(f"  {name:15s} {k:2d}/{len(v):<2d}  {lo:.2f}-{hi:.2f}")
+        eng = [r for r in v if attempted_rebook(r)]
+        print(f"  duplicates among trials that re-attempted: {sum(r['duplicate'] for r in eng)}/{len(eng)}"
+              f"  (blocked: {sum(r['guard_suppressed'] > 0 for r in eng)}/{len(eng)}); never attempted: {len(v) - len(eng)}")
+        m = [r for r in v if "mention_label" in r]
+        if m:
+            k = sum(r["mention_label"] == "MENTIONS" for r in m)
+            lo, hi = wilson(k, len(m))
+            print(f"  first reply mentions booking {k}/{len(m)}  {lo:.2f}-{hi:.2f}")
+        labels = {}
+        for r in v:
+            labels[r.get("judge_label")] = labels.get(r.get("judge_label"), 0) + 1
+        print(f"  judge labels    {labels}")
+        if v and not any(r["guard_suppressed"] for r in v) and cond == "library":
+            print("  ** guard never engaged: the duplicate result says nothing about the guard **")
+
+
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--trials", type=int, default=20)
@@ -376,12 +489,28 @@ async def main():
     ap.add_argument("--reask", default="insist", choices=sorted(REASKS))
     ap.add_argument("--turns", type=int, default=2, choices=(2, 3),
                     help="2 = ask, drop, re-ask (first spike). 3 = also answer the agent's question.")
+    ap.add_argument("--resolver", default="none", choices=("none", "committed", "unknown"),
+                    help="library only: status check that resolves the pending booking on resume")
+    ap.add_argument("--rescore", default=None, help="annotate an existing results file instead of running trials")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     if not os.environ.get("GROQ_API_KEY"):
         sys.exit("GROQ_API_KEY is not set (looked in the environment and .env)")
 
-    out_path = a.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), f"phase1{'b' if a.turns == 3 else ''}_results_{a.reask}.json")
+    if a.rescore:
+        with open(a.rescore, encoding="utf-8") as f:
+            data = json.load(f)
+        for r in data["results"]:
+            if r["valid"]:
+                await annotate(data["model"], r)
+        with open(a.rescore, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        summarize(data["results"], sorted({r["condition"] for r in data["results"]}))
+        print(f"\nannotated: {a.rescore}")
+        return
+
+    suffix = "" if a.resolver == "none" else f"_{a.resolver}"
+    out_path = a.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), f"phase1{'b' if a.turns == 3 else ''}_results_{a.reask}{suffix}.json")
     results = []
     with tempfile.TemporaryDirectory() as db_dir:
         for cond in a.conditions.split(","):
@@ -389,40 +518,22 @@ async def main():
                 attempts = 0
                 while True:
                     attempts += 1
-                    r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts}", a.turns)
+                    r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts}", a.turns, a.resolver)
                     r["attempts"] = attempts
                     if r["valid"] or attempts >= 3:
                         break
                     await asyncio.sleep(5)
                 if r["valid"]:
-                    r["judge_label"] = await judge(a.model, r["closing_utterance"])
-                    r["false_claim"] = false_claim(r)
+                    await annotate(a.model, r)
                 results.append(r)
                 flag = "DUP" if r.get("duplicate") else ("ok " if r["valid"] else "INV")
-                print(f"{cond:8s} trial {i:2d}: {flag}  bookings={r.get('max_bookings_same_slot')}  guard={r.get('guard_suppressed')}  judge={r.get('judge_label')}  {r.get('reason', '')}", flush=True)
+                print(f"{cond:8s} trial {i:2d}: {flag}  bookings={r.get('max_bookings_same_slot')}  guard={r.get('guard_suppressed')}  judge={r.get('judge_label')}  kind={r.get('false_claim_kind')}  mention={r.get('mention_label')}  {r.get('reason', '')}", flush=True)
                 with open(out_path, "w", encoding="utf-8") as f:
-                    json.dump({"model": a.model, "reask": a.reask, "turns": a.turns, "results": results}, f, indent=2)
+                    json.dump({"model": a.model, "reask": a.reask, "turns": a.turns, "resolver": a.resolver, "results": results}, f, indent=2)
                 await asyncio.sleep(1)
 
-    print(f"\nmodel={a.model}  reask={a.reask}  turns={a.turns}")
-    metrics = (("duplicate", lambda r: r["duplicate"]),
-               ("guard engaged", lambda r: r["guard_suppressed"] > 0),
-               ("loss", lambda r: not r["booking_made"]),
-               ("false claim", lambda r: r.get("false_claim")))
-    for cond in a.conditions.split(","):
-        rs = [r for r in results if r["condition"] == cond]
-        v = [r for r in rs if r["valid"]]
-        print(f"\n{cond}: {len(v)} valid, {len(rs) - len(v)} invalid")
-        for name, fn in metrics:
-            k = sum(1 for r in v if fn(r))
-            lo, hi = wilson(k, len(v))
-            print(f"  {name:14s} {k:2d}/{len(v):<2d}  {lo:.2f}-{hi:.2f}")
-        labels = {}
-        for r in v:
-            labels[r.get("judge_label")] = labels.get(r.get("judge_label"), 0) + 1
-        print(f"  judge labels   {labels}")
-        if v and not any(r["guard_suppressed"] for r in v) and cond == "library":
-            print("  ** guard never engaged: the duplicate result says nothing about the guard **")
+    print(f"\nmodel={a.model}  reask={a.reask}  turns={a.turns}  resolver={a.resolver}")
+    summarize(results, a.conditions.split(","))
     print(f"\nper-trial detail: {out_path}")
 
 
