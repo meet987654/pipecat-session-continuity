@@ -77,9 +77,9 @@ continuity.register_status_check("book_appointment", check_booking)   # retry_on
 ```
 
 The hook returns `("completed", result)` (or `{"status": "completed", "result": ...}`), `"not_found"`, or `"unknown"`:
-- `completed`: the record is marked completed and the LLM is told the confirmed result.
+- `completed`: the record is marked completed, and the LLM is told the confirmed result and to tell the caller first.
 - `not_found`: **treated like `unknown` by default.** Status APIs can lag behind the write, so "not found" may just mean "not visible yet", and retrying against an API that ignores idempotency keys would double-book. Pass `retry_on_not_found=True` only if your backend honours idempotency keys or your status API is strongly consistent; then exactly one retry is allowed under the **same** idempotency key (`record["idempotency_key"]`), which you must pass to your API. A second re-call is blocked.
-- `unknown`, an exception, or no answer within `SessionContinuity(status_check_timeout_seconds=1.0)`: unchanged behaviour, the LLM is told to ask the caller. Trade-off: a shorter timeout keeps resume fast but a slow status API more often falls back to "unconfirmed"; a longer one resolves more cases but delays the caller's resume by up to that long.
+- `unknown`, an exception, or no answer within `SessionContinuity(status_check_timeout_seconds=1.0)`: the record stays pending and is marked inconclusive. The LLM is told it cannot confirm the outcome and is forbidden from claiming either success or failure. It is not told to ask the caller, because the backend has already been asked. Trade-off: a shorter timeout keeps resume fast but a slow status API more often falls back to "unconfirmed"; a longer one resolves more cases but delays the caller's resume by up to that long.
 
 Tools without a hook behave exactly as before. Hooks run concurrently on resume. See `examples/06_status_check_hook.py`.
 

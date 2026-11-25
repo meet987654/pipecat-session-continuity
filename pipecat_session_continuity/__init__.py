@@ -112,10 +112,12 @@ class SessionContinuity:
             you pass ``retry_on_not_found=True`` is exactly one retry allowed,
             under the SAME idempotency key.
           - ``"unknown"``, an exception, or no answer within
-            ``status_check_timeout_seconds`` (default 1 s): behaviour is
-            unchanged, the LLM is told the outcome is unconfirmed.
+            ``status_check_timeout_seconds`` (default 1 s): the record stays
+            pending and is marked inconclusive. The LLM is told the outcome cannot
+            be confirmed and is forbidden from claiming success or failure. It is
+            not told to ask the caller, because the backend has already been asked.
 
-        Tools without a hook behave exactly as before.
+        Tools without a hook behave exactly as before (unconfirmed notice, ask the caller).
         """
         self._status_checks[tool_name] = {"fn": fn, "retry_on_not_found": retry_on_not_found}
 
@@ -165,6 +167,11 @@ class SessionContinuity:
             elif status == "not_found" and self._status_checks[registry.records[key]["tool_name"]]["retry_on_not_found"]:
                 registry.records[key]["status"] = RETRY_ALLOWED
                 registry.records[key]["updated_at"] = time.time()
+            else:
+                # The backend was asked and gave no usable answer (unknown, untrusted
+                # not_found, error or timeout). Neither "done" nor "not done" is
+                # supported, so resume forbids the LLM from claiming either.
+                registry.records[key]["status_check"] = "inconclusive"
 
     async def resume_or_start(
         self,
@@ -185,6 +192,9 @@ class SessionContinuity:
         pending_tool_calls = {}
         metadata = {}
         unconfirmed_tools: List[str] = []
+        inconclusive_tools: List[str] = []  # pending AND a status check could not resolve them
+        confirmed_tools: List[str] = []  # a status check confirmed they happened
+        not_done_tools: List[str] = []  # a status check confirmed they did not happen (retry allowed)
         try:
             restored_context = await self.manager.load_context(session_id)
 
@@ -207,7 +217,23 @@ class SessionContinuity:
                     args_desc = f" with arguments {args}" if args is not None else ""
                     status = tool_data.get("status")
 
-                    if status == "pending":
+                    if status == "pending" and tool_data.get("status_check") == "inconclusive":
+                        unconfirmed_tools.append(tool_name)
+                        inconclusive_tools.append(tool_name)
+                        sys_msg = {
+                            "role": "system",
+                            "content": (
+                                f"[System Notice: The connection dropped while executing the tool '{tool_name}'{args_desc}. "
+                                f"A status check could not determine whether it went through: it may have completed or it may not have. "
+                                f"Do NOT call this tool again for the same request or arguments. For the rest of this conversation, "
+                                f"do not tell the user that it succeeded or is confirmed, and do not tell them that it failed, did not go "
+                                f"through, or that no record of it exists: either could be false. Say that you cannot confirm the outcome "
+                                f"right now. Do not suggest repeating the request with different details to work around this, because "
+                                f"the original may already have gone through.]"
+                            )
+                        }
+                        context.add_message(sys_msg)
+                    elif status == "pending":
                         unconfirmed_tools.append(tool_name)
                         sys_msg = {
                             "role": "system",
@@ -220,6 +246,7 @@ class SessionContinuity:
                         }
                         context.add_message(sys_msg)
                     elif status == RETRY_ALLOWED:
+                        not_done_tools.append(tool_name)
                         sys_msg = {
                             "role": "system",
                             "content": (
@@ -230,6 +257,7 @@ class SessionContinuity:
                         }
                         context.add_message(sys_msg)
                     elif status == "completed" and tool_data.get("confirmed_by") == "status_check":
+                        confirmed_tools.append(tool_name)
                         result = tool_data.get("result")
                         result_desc = f" Confirmed result: {result}." if result is not None else ""
                         sys_msg = {
@@ -274,7 +302,17 @@ class SessionContinuity:
                     "content": "[System Notice: A new user has just connected to the voice call. Please greet them warmly and ask how you can help.]"
                 }
 
-            if is_resumed and unconfirmed_tools:
+            if is_resumed and inconclusive_tools and len(inconclusive_tools) == len(unconfirmed_tools):
+                # A status check already asked the backend and it could not say. Asking the
+                # caller ("did you get a confirmation?") does not resolve that either, so the
+                # instruction is to state the uncertainty, not to collect a guess.
+                names = ", ".join(f"'{n}'" for n in dict.fromkeys(inconclusive_tools))
+                msg["content"] = msg["content"].rstrip("]") + (
+                    f" Before anything else, tell the user that their request ({names}) was interrupted by the "
+                    f"disconnect and that you cannot confirm whether it went through. Do not say it succeeded and do not "
+                    f"say it failed. Do not call the tool again.]"
+                )
+            elif is_resumed and unconfirmed_tools:
                 # The last message is what the LLM answers, and a generic "acknowledge and ask how
                 # to continue" message was found to override the pending-tool system notice (the
                 # model never mentioned the interrupted action). Put the instruction here too.
@@ -284,7 +322,19 @@ class SessionContinuity:
                     f"disconnect and that you cannot confirm whether it went through, and ask whether they received a "
                     f"confirmation. Do not say it succeeded and do not say it failed. Do not call the tool again until they answer.]"
                 )
-            
+            elif is_resumed and (confirmed_tools or not_done_tools):
+                # A definite answer from a status check: state it as fact up front, or the
+                # model answers the generic message and never mentions the request.
+                parts = []
+                if confirmed_tools:
+                    names = ", ".join(f"'{n}'" for n in dict.fromkeys(confirmed_tools))
+                    parts.append(f"tell the user that their request ({names}) did go through before the disconnect, "
+                                 f"using the confirmed result, and do not call it again")
+                if not_done_tools:
+                    names = ", ".join(f"'{n}'" for n in dict.fromkeys(not_done_tools))
+                    parts.append(f"tell the user that their request ({names}) did not go through, and offer to try it once more")
+                msg["content"] = msg["content"].rstrip("]") + " Before anything else, " + "; and ".join(parts) + ".]"
+
             await task.queue_frames([LLMMessagesAppendFrame([msg])])
             elapsed_ms = (time.time() - start_time) * 1000
             self.metrics.record_resume(elapsed_ms, is_resumed=is_resumed, status="success")

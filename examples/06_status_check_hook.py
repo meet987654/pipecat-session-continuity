@@ -8,7 +8,7 @@ With a hook, resume asks the booking backend what actually happened:
   completed  -> record marked completed, the LLM is told the confirmed result
   not_found  -> only with retry_on_not_found=True: exactly ONE retry, under the SAME
                 idempotency key. By default it is treated like "unknown".
-  unknown / error / timeout (1 s default) -> today's "unconfirmed" notice
+  unknown / error / timeout (1 s default) -> "inconclusive" notice: no claim either way
 
 Tools with no registered hook behave exactly as before.
 """

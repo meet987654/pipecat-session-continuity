@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- **A status check that cannot answer is no longer treated like having no status check.** When a registered hook returns `unknown`, an untrusted `not_found`, raises, or times out, the record stays pending (still guarded) but gets a stricter notice: the LLM must not say the action succeeded or failed for the rest of the call, must say it cannot confirm, and must not suggest repeating it with different details. It is no longer told to ask the caller whether they got a confirmation, since the backend has already been asked. Tools without a hook keep the existing "unconfirmed, ask the caller" notice.
+- When a status check gives a definite answer (`completed`, or `not_found` with `retry_on_not_found=True`), the final resume message now tells the LLM to state that outcome first. Previously it got the generic "ask how you can continue" message and the first reply often didn't mention the request.
 ### Fixed
 - When a resumed session has unconfirmed (pending) tool calls, the final "connection restored" message the LLM answers now names the interrupted tool and tells it to say the outcome can't be confirmed and ask the caller. In a 20-trial check with `openai/gpt-oss-120b`, the generic message made the model ignore the pending-tool system notice (0/20 mentioned the booking). Behaviour is unchanged when nothing is pending or a status check resolved it.
 ### Changed
