@@ -100,6 +100,15 @@ surface it as an explicit decision to the agent/caller), or require a status-che
 `no_resolver=True` opt-in) for any tool the guard protects. Not implemented yet: the spike measures the
 current behaviour.
 
+### First live trials (partial: insist, baseline, 5 of 8)
+
+`phase1b_results_insist_nc.json`, stopped by the daily cap after 5 trials. Loss **5/5 (0.57-1.00)**, 0 duplicates,
+guard engaged 3/5 and blocked 3/3; no other slot was booked. In 4 of 5 closings the agent offers to rebook the
+*same* Thursday 3pm slot and asks the caller whether to go ahead, which the guard will block again. In trial 1 it
+says it "can't retry that identical request" and asks for a different time. That is the steering path, driven by
+the library's own "do not call this tool again" notice. Cost: ~6,350 tokens per trial (agent + judges), not the
+3,500 the budget gate assumed, so one day's 200k cap fits about 30 trials.
+
 ## Open scope question: re-booking with different arguments
 
 A second booking with different arguments (another slot, a differently spelled name) gets a new idempotency key,
