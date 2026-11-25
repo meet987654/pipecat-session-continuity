@@ -5,6 +5,7 @@ from .storage.redis_storage import RedisStorage
 from .storage.sqlite_storage import SQLiteStorage
 from .idempotency import (
     RETRY_ALLOWED,
+    UNRESOLVED,
     IdempotencyRegistry,
     generate_idempotency_key,
     canonicalize_arguments,
@@ -33,6 +34,7 @@ __all__ = [
     "SQLiteStorage",
     "IdempotencyRegistry",
     "RETRY_ALLOWED",
+    "UNRESOLVED",
     "generate_idempotency_key",
     "canonicalize_arguments",
     "BaseMetricsExporter",
@@ -60,6 +62,7 @@ class SessionContinuity:
         secret=None,
         stale_threshold_minutes=30,
         status_check_timeout_seconds: float = 1.0,
+        pending_timeouts: Optional[Dict[str, float]] = None,
         enable_prometheus: bool = False,
         enable_opentelemetry: bool = False,
         metrics_exporter: Optional[BaseMetricsExporter] = None,
@@ -91,6 +94,57 @@ class SessionContinuity:
         self.stale_threshold_minutes = stale_threshold_minutes
         self.status_check_timeout_seconds = status_check_timeout_seconds
         self._status_checks: Dict[str, Dict[str, Any]] = {}
+        # Per-tool seconds after which a pending record stops blocking (see set_pending_timeout).
+        self._pending_timeouts: Dict[str, float] = {}
+        for name, seconds in (pending_timeouts or {}).items():
+            self.set_pending_timeout(name, seconds)
+        self._warned_unresolvable: set = set()
+
+    def set_pending_timeout(self, tool_name: str, seconds: float) -> None:
+        """
+        Stop a pending record for `tool_name` from blocking forever.
+
+        A record stays "pending" when the connection drops before the tool's result
+        is recorded, including when the side effect never happened. Without a
+        timeout (the default, unchanged from 0.3.0) the guard blocks every identical
+        retry for the life of the session. With one, on resume, a record pending for
+        longer than `seconds` (measured from its last attempt):
+
+          - is first passed to the tool's status check, if one is registered, and
+            resolved by its answer as usual;
+          - otherwise (no status check, or one that could not answer) becomes
+            ``UNRESOLVED``: the resume notice tells the LLM the outcome is unknown and
+            to ask the caller whether to try the same request again, and the guard
+            lets one identical retry through.
+
+        Pick `seconds` to be longer than the tool can take to land on your backend.
+        Note the trade-off: with no status check, if the original did go through and
+        your backend ignores idempotency keys, the caller's retry can duplicate it.
+        """
+        if seconds is None or seconds < 0:
+            raise ValueError("pending timeout must be a number of seconds >= 0")
+        self._pending_timeouts[tool_name] = float(seconds)
+
+    def _warn_if_unresolvable(self, tool_name: str) -> None:
+        if tool_name in self._warned_unresolvable:
+            return
+        if tool_name in self._status_checks:
+            return
+        self._warned_unresolvable.add(tool_name)
+        if tool_name in self._pending_timeouts:
+            logger.warning(
+                f"Tool '{tool_name}' is guarded but has no status check. After its "
+                f"{self._pending_timeouts[tool_name]:g}s pending timeout, an interrupted call becomes the caller's "
+                f"decision to retry; if the original did go through and the backend ignores idempotency keys, "
+                f"that retry can duplicate it. Register a status check (register_status_check) to avoid guessing."
+            )
+        else:
+            logger.warning(
+                f"Tool '{tool_name}' is guarded but has no status check and no pending timeout. If the "
+                f"connection drops before its result is recorded, every identical retry is blocked for the "
+                f"rest of the session, even when the action never happened. Register a status check "
+                f"(register_status_check) or set a pending timeout (set_pending_timeout)."
+            )
 
     def register_status_check(
         self,
@@ -112,10 +166,12 @@ class SessionContinuity:
             you pass ``retry_on_not_found=True`` is exactly one retry allowed,
             under the SAME idempotency key.
           - ``"unknown"``, an exception, or no answer within
-            ``status_check_timeout_seconds`` (default 1 s): behaviour is
-            unchanged, the LLM is told the outcome is unconfirmed.
+            ``status_check_timeout_seconds`` (default 1 s): the record stays
+            pending and is marked inconclusive. The LLM is told the outcome cannot
+            be confirmed and is forbidden from claiming success or failure. It is
+            not told to ask the caller, because the backend has already been asked.
 
-        Tools without a hook behave exactly as before.
+        Tools without a hook behave exactly as before (unconfirmed notice, ask the caller).
         """
         self._status_checks[tool_name] = {"fn": fn, "retry_on_not_found": retry_on_not_found}
 
@@ -135,7 +191,7 @@ class SessionContinuity:
         targets = [
             (key, rec)
             for key, rec in registry.records.items()
-            if rec.get("status") in ("pending", RETRY_ALLOWED)
+            if rec.get("status") in ("pending", RETRY_ALLOWED, UNRESOLVED)
             and rec.get("tool_name") in self._status_checks
         ]
         if not targets:
@@ -165,6 +221,29 @@ class SessionContinuity:
             elif status == "not_found" and self._status_checks[registry.records[key]["tool_name"]]["retry_on_not_found"]:
                 registry.records[key]["status"] = RETRY_ALLOWED
                 registry.records[key]["updated_at"] = time.time()
+            else:
+                # The backend was asked and gave no usable answer (unknown, untrusted
+                # not_found, error or timeout). Neither "done" nor "not done" is
+                # supported, so resume forbids the LLM from claiming either.
+                registry.records[key]["status_check"] = "inconclusive"
+
+    def _escalate_timed_out(self, registry: IdempotencyRegistry) -> None:
+        """After status checks: a pending record past its tool's pending_timeout becomes UNRESOLVED."""
+        now = time.time()
+        for rec in registry.records.values():
+            timeout = self._pending_timeouts.get(rec.get("tool_name"))
+            if rec.get("status") != "pending" or timeout is None:
+                continue
+            last = rec.get("updated_at") or rec.get("created_at") or now
+            if now - last >= timeout:
+                rec["status"] = UNRESOLVED
+                rec["unresolved_reason"] = (
+                    "status_check_inconclusive" if rec.get("status_check") == "inconclusive" else "no_status_check"
+                )
+                logger.warning(
+                    f"Pending '{rec.get('tool_name')}' ({rec.get('idempotency_key')}) passed its "
+                    f"{timeout:g}s pending timeout unresolved ({rec['unresolved_reason']}); asking the caller."
+                )
 
     async def resume_or_start(
         self,
@@ -184,6 +263,11 @@ class SessionContinuity:
         is_resumed = False
         pending_tool_calls = {}
         metadata = {}
+        unconfirmed_tools: List[str] = []
+        inconclusive_tools: List[str] = []  # pending AND a status check could not resolve them
+        confirmed_tools: List[str] = []  # a status check confirmed they happened
+        not_done_tools: List[str] = []  # a status check confirmed they did not happen (retry allowed)
+        unresolved_tools: List[str] = []  # past pending_timeout, unresolved: the caller decides
         try:
             restored_context = await self.manager.load_context(session_id)
 
@@ -193,6 +277,7 @@ class SessionContinuity:
                 raw_tools = restored_context.get("pending_tool_calls", {})
                 registry = IdempotencyRegistry(raw_tools)
                 await self._run_status_checks(registry)
+                self._escalate_timed_out(registry)
                 pending_tool_calls = registry.to_dict()
                 metadata = restored_context.get("metadata", {})
                 is_resumed = True
@@ -206,7 +291,43 @@ class SessionContinuity:
                     args_desc = f" with arguments {args}" if args is not None else ""
                     status = tool_data.get("status")
 
-                    if status == "pending":
+                    if status == UNRESOLVED:
+                        unresolved_tools.append(tool_name)
+                        checked = (
+                            " A status check could not tell either."
+                            if tool_data.get("unresolved_reason") == "status_check_inconclusive" else ""
+                        )
+                        sys_msg = {
+                            "role": "system",
+                            "content": (
+                                f"[System Notice: The connection dropped while executing the tool '{tool_name}'{args_desc}. "
+                                f"Its outcome is unknown: it may have gone through or it may not have.{checked} "
+                                f"Whether to try again is the caller's decision. Tell the user that you cannot confirm "
+                                f"whether it went through, and ask whether they want you to try the same request again "
+                                f"with the same details. If they say yes, call '{tool_name}' once more with exactly the same "
+                                f"arguments. Do not say it succeeded and do not say it failed, and do not offer a different "
+                                f"time, day or other details instead of asking.]"
+                            )
+                        }
+                        context.add_message(sys_msg)
+                    elif status == "pending" and tool_data.get("status_check") == "inconclusive":
+                        unconfirmed_tools.append(tool_name)
+                        inconclusive_tools.append(tool_name)
+                        sys_msg = {
+                            "role": "system",
+                            "content": (
+                                f"[System Notice: The connection dropped while executing the tool '{tool_name}'{args_desc}. "
+                                f"A status check could not determine whether it went through: it may have completed or it may not have. "
+                                f"Do NOT call this tool again for the same request or arguments. For the rest of this conversation, "
+                                f"do not tell the user that it succeeded or is confirmed, and do not tell them that it failed, did not go "
+                                f"through, or that no record of it exists: either could be false. Say that you cannot confirm the outcome "
+                                f"right now. Do not suggest repeating the request with different details to work around this, because "
+                                f"the original may already have gone through.]"
+                            )
+                        }
+                        context.add_message(sys_msg)
+                    elif status == "pending":
+                        unconfirmed_tools.append(tool_name)
                         sys_msg = {
                             "role": "system",
                             "content": (
@@ -218,16 +339,19 @@ class SessionContinuity:
                         }
                         context.add_message(sys_msg)
                     elif status == RETRY_ALLOWED:
+                        not_done_tools.append(tool_name)
                         sys_msg = {
                             "role": "system",
                             "content": (
                                 f"[System Notice: The connection dropped while executing the tool '{tool_name}'{args_desc}. "
                                 f"A status check confirmed that this action did NOT happen. You may call '{tool_name}' once more "
-                                f"with the same arguments, passing idempotency key '{idemp_key}'. Do not retry more than once.]"
+                                f"with exactly the same arguments. Do not add any extra argument (the app reuses the original "
+                                f"idempotency key itself). Do not retry more than once.]"
                             )
                         }
                         context.add_message(sys_msg)
                     elif status == "completed" and tool_data.get("confirmed_by") == "status_check":
+                        confirmed_tools.append(tool_name)
                         result = tool_data.get("result")
                         result_desc = f" Confirmed result: {result}." if result is not None else ""
                         sys_msg = {
@@ -271,7 +395,50 @@ class SessionContinuity:
                     "role": "user",
                     "content": "[System Notice: A new user has just connected to the voice call. Please greet them warmly and ask how you can help.]"
                 }
-            
+
+            if is_resumed and unresolved_tools and not unconfirmed_tools:
+                # Past its pending timeout with no answer: surface it as the caller's decision,
+                # not a block. Retrying the same request is allowed once; steering is not asked for.
+                names = ", ".join(f"'{n}'" for n in dict.fromkeys(unresolved_tools))
+                msg["content"] = msg["content"].rstrip("]") + (
+                    f" Before anything else, tell the user that their request ({names}) was interrupted by the "
+                    f"disconnect and that you cannot confirm whether it went through, and ask whether they would like "
+                    f"you to try the same request again with the same details. Do not say it succeeded and do not say "
+                    f"it failed.]"
+                )
+            elif is_resumed and inconclusive_tools and len(inconclusive_tools) == len(unconfirmed_tools):
+                # A status check already asked the backend and it could not say. Asking the
+                # caller ("did you get a confirmation?") does not resolve that either, so the
+                # instruction is to state the uncertainty, not to collect a guess.
+                names = ", ".join(f"'{n}'" for n in dict.fromkeys(inconclusive_tools))
+                msg["content"] = msg["content"].rstrip("]") + (
+                    f" Before anything else, tell the user that their request ({names}) was interrupted by the "
+                    f"disconnect and that you cannot confirm whether it went through. Do not say it succeeded and do not "
+                    f"say it failed. Do not call the tool again.]"
+                )
+            elif is_resumed and unconfirmed_tools:
+                # The last message is what the LLM answers, and a generic "acknowledge and ask how
+                # to continue" message was found to override the pending-tool system notice (the
+                # model never mentioned the interrupted action). Put the instruction here too.
+                names = ", ".join(f"'{n}'" for n in dict.fromkeys(unconfirmed_tools))
+                msg["content"] = msg["content"].rstrip("]") + (
+                    f" Before anything else, tell the user that their request ({names}) was interrupted by the "
+                    f"disconnect and that you cannot confirm whether it went through, and ask whether they received a "
+                    f"confirmation. Do not say it succeeded and do not say it failed. Do not call the tool again until they answer.]"
+                )
+            elif is_resumed and (confirmed_tools or not_done_tools):
+                # A definite answer from a status check: state it as fact up front, or the
+                # model answers the generic message and never mentions the request.
+                parts = []
+                if confirmed_tools:
+                    names = ", ".join(f"'{n}'" for n in dict.fromkeys(confirmed_tools))
+                    parts.append(f"tell the user that their request ({names}) did go through before the disconnect, "
+                                 f"using the confirmed result, and do not call it again")
+                if not_done_tools:
+                    names = ", ".join(f"'{n}'" for n in dict.fromkeys(not_done_tools))
+                    parts.append(f"tell the user that their request ({names}) did not go through, and offer to try it once more")
+                msg["content"] = msg["content"].rstrip("]") + " Before anything else, " + "; and ".join(parts) + ".]"
+
             await task.queue_frames([LLMMessagesAppendFrame([msg])])
             elapsed_ms = (time.time() - start_time) * 1000
             self.metrics.record_resume(elapsed_ms, is_resumed=is_resumed, status="success")
@@ -314,6 +481,10 @@ class SessionContinuity:
                 client_token=client_token,
             )
 
+        if is_dup and rec is not None and rec.get("status") == UNRESOLVED:
+            # Past its pending timeout and unresolved: the caller decides, so the identical
+            # retry is allowed (record_tool_call then consumes it and the record is pending again).
+            is_dup = False
         if is_dup:
             self.metrics.record_tool_call(tool_name, status="duplicate")
         return is_dup, rec
@@ -330,6 +501,7 @@ class SessionContinuity:
         """
         Registers an in-flight tool call in the registry or dictionary.
         """
+        self._warn_if_unresolvable(tool_name)
         if isinstance(pending_tool_calls, IdempotencyRegistry):
             rec = pending_tool_calls.register_call(
                 tool_name=tool_name,

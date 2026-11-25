@@ -11,3 +11,9 @@ __pycache__/
 *.db
 node_modules/
 client-sdk/dist/
+
+# Personal notes (kept locally, not part of the library)
+CRASH_NOTES.md
+INTERVIEW_NOTES.md
+MENTOR_LESSONS.md
+PROJECT_OVERVIEW.md

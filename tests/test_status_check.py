@@ -118,7 +118,7 @@ async def test_not_found_allows_exactly_one_retry_with_same_key(tmp_path):
     registry, notices = await _resume(continuity)
 
     assert registry.records[key]["status"] == RETRY_ALLOWED
-    assert "did NOT happen" in notices[0] and key in notices[0]
+    assert "did NOT happen" in notices[0] and key not in notices[0]  # the app passes the key, not the LLM
 
     # First re-call (new tool_call_id): allowed, same key, now pending again.
     is_dup, entry = continuity.check_tool_idempotency(registry, "book_appointment", ARGS, tool_call_id="call_2")
@@ -142,14 +142,14 @@ async def test_not_found_without_opt_in_is_treated_as_unknown(tmp_path):
     registry, notices = await _resume(continuity)
 
     assert registry.records[key]["status"] == "pending"
-    assert len(notices) == 1 and "unconfirmed" in notices[0] and "did NOT happen" not in notices[0]
+    assert len(notices) == 1 and "could not determine" in notices[0] and "did NOT happen" not in notices[0]
     # A re-call is blocked: no retry was granted.
     is_dup, entry = continuity.check_tool_idempotency(registry, "book_appointment", ARGS, tool_call_id="call_2")
     assert is_dup and entry["status"] == "pending"
 
 
 @pytest.mark.asyncio
-async def test_unknown_keeps_unconfirmed_notice(tmp_path):
+async def test_unknown_gives_inconclusive_notice(tmp_path):
     continuity, key = await _pending_session(tmp_path)
 
     async def hook(k, a):
@@ -158,11 +158,11 @@ async def test_unknown_keeps_unconfirmed_notice(tmp_path):
     continuity.register_status_check("book_appointment", hook)
     registry, notices = await _resume(continuity)
     assert registry.records[key]["status"] == "pending"
-    assert "unconfirmed" in notices[0]
+    assert "could not determine" in notices[0]
 
 
 @pytest.mark.asyncio
-async def test_hook_timeout_keeps_unconfirmed_notice(tmp_path):
+async def test_hook_timeout_gives_inconclusive_notice(tmp_path):
     continuity, key = await _pending_session(tmp_path, status_check_timeout_seconds=0.05)
 
     async def hook(k, a):
@@ -175,7 +175,7 @@ async def test_hook_timeout_keeps_unconfirmed_notice(tmp_path):
     registry, notices = await _resume(continuity)
     assert loop.time() - t0 < 1.0, "must not wait for the slow hook"
     assert registry.records[key]["status"] == "pending"
-    assert "unconfirmed" in notices[0] and "too_late" not in notices[0]
+    assert "could not determine" in notices[0] and "too_late" not in notices[0]
 
 
 @pytest.mark.asyncio
@@ -185,7 +185,7 @@ async def test_default_timeout_is_one_second(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_hook_raises_keeps_unconfirmed_notice(tmp_path):
+async def test_hook_raises_gives_inconclusive_notice(tmp_path):
     continuity, key = await _pending_session(tmp_path)
 
     async def hook(k, a):
@@ -194,7 +194,7 @@ async def test_hook_raises_keeps_unconfirmed_notice(tmp_path):
     continuity.register_status_check("book_appointment", hook)
     registry, notices = await _resume(continuity)
     assert registry.records[key]["status"] == "pending"
-    assert "unconfirmed" in notices[0]
+    assert "could not determine" in notices[0]
 
 
 @pytest.mark.asyncio
@@ -207,4 +207,4 @@ async def test_garbage_return_value_is_unknown(tmp_path):
     continuity.register_status_check("book_appointment", hook)
     registry, notices = await _resume(continuity)
     assert registry.records[key]["status"] == "pending"
-    assert "unconfirmed" in notices[0]
+    assert "could not determine" in notices[0]
