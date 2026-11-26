@@ -144,18 +144,19 @@ Files: `phase1b_results_insist_not_committed_nc.json`, `phase1b_results_insist_p
 Runner bug found before this run: `main()` parsed `--pending-timeout` but did not pass it to `run_trial`, so the
 timeout arm would have run as the baseline under the `_pt0` file name. Fixed in b76b3e5 before any `_pt0` trial.
 
-### Committed, pending timeout 0, no resolver: the risk side (partial, n=10 of 20)
+### Committed, pending timeout 0, no resolver: the risk side (stopped at n=11, conclusive)
 
 `--first-booking committed --pending-timeout 0`, insist, `phase1b_results_insist_pt0.json`. Run with the `run_llm`
 bridge bug still unfixed (the extra empty `run_llm` nudge), like every earlier arm. Stopped by the daily token cap
-after 10 trials.
+after 10 trials; trial 10 was added later on the same pinned code (`ebe8dcf`, via a worktree), then the arm
+was stopped as conclusive.
 
 | n | Duplicates | Loss | Permitted retry | Guard engaged | Other slot | False claim |
 |---|---|---|---|---|---|---|
-| 10 | **10/10 (0.72-1.00)** | 0/10 (0.00-0.28) | 10/10 | 3/10 | 0/10 | 0/10 (0.00-0.28), by eye; not judged yet |
+| 11 | **11/11 (0.74-1.00)** | 0/11 (0.00-0.26) | 11/11 | 3/11 | 0/11 | 0/11 (0.00-0.26), by eye; not judged yet |
 
 Prediction confirmed: the mock backend ignores the idempotency key, so the one permitted retry books a second time
-in every trial. The guard engaged in 3 of 10, each time blocking a *third* call, so no trial got more than 2 bookings.
+in every trial. The guard engaged in 3 of 11, each time blocking a *third* call, so no trial got more than 2 bookings.
 Every closing quotes `CONF-002`: the caller is told about one booking while two exist. That is a true "booked"
 claim, so the claim rubric does not count it, but it hides the duplicate. Compare the committed baseline
 (insist/none): duplicates 0/13 re-attempts, because the guard blocks the retry.
@@ -163,7 +164,11 @@ claim, so the claim rubric does not count it, but it hides the duplicate. Compar
 The opposite case is covered with zero tokens in `tests/test_timeout_after_commit.py`: with a backend that honours the
 key, the retry carries the same key and gets the original `CONF-001` back, and the ledger holds one booking.
 
-**To finish trials 10-19 comparably**, run them on the pre-fix code; `main` now has the `run_llm` fix, and the spike
+**Consequence for 0.4.0:** a pending timeout without a status check no longer permits the retry unless the app
+passes `allow_unverified_retry=True` for that tool; without it the record escalates to `UNRESOLVED` (caller told) but
+stays blocked. Every timeout arm above ran with the retry permitted; the spike now sets the flag explicitly.
+
+**To add trials 11-19 comparably** (not needed), run them on the pre-fix code; `main` now has the `run_llm` fix, and the spike
 no longer sends the nudge. The spike imports the library from its own checkout, so a worktree pins both:
 
     git worktree add ../sc-phase1b ebe8dcf

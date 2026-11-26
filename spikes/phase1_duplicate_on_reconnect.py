@@ -339,7 +339,8 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
     server = MockToolServer(status_api_up=(resolver != "unknown"), first_commits=(first_booking == "committed"))
     continuity = SessionContinuity(db_path=os.path.join(db_dir, f"t{idx}.db"), secret="spike")
     if pending_timeout is not None:
-        continuity.set_pending_timeout("book_appointment", pending_timeout)
+        # Every timeout arm so far measured the permitted retry (the pre-0.4.0 default).
+        continuity.set_pending_timeout("book_appointment", pending_timeout, allow_unverified_retry=True)
     resolver_answers = []
     if condition == "library" and resolver != "none":
         async def check_booking(idempotency_key, args):

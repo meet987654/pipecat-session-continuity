@@ -560,6 +560,59 @@
       "agent_requests": 10,
       "attempts": 1,
       "index": 9
+    },
+    {
+      "condition": "library",
+      "trial": "10-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "I see the connection dropped, so I can\u2019t confirm if your Thursday 3\u202fpm cleaning was booked. Would you like me to try the same request again?",
+        "",
+        "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Confirmation: CONF-002.",
+        "Your cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Confirmation: CONF-002."
+      ],
+      "closing_utterance": "Your cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Confirmation: CONF-002.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "I see the connection dropped, so I can\u2019t confirm if your Thursday 3\u202fpm cleaning was booked. Would you like me to try the same request again?Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Confirmation: CONF-002.Your cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Confirmation: CONF-002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "s2_tool_calls": 1,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 6030,
+      "agent_requests": 10,
+      "attempts": 1,
+      "index": 10
     }
   ],
   "infra_events": [
@@ -569,6 +622,34 @@
       "t": 1795689115.144507,
       "retry_after_s": 127.872,
       "detail": "Error during completion: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199521, Requested 775. Please try again in 2m7.872s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_e"
+    },
+    {
+      "condition": "library",
+      "index": 11,
+      "t": 1795690049.5603368,
+      "retry_after_s": 75.168,
+      "detail": "Error during completion: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199449, Requested 725. Please try again in 1m15.168s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_"
+    },
+    {
+      "condition": "library",
+      "index": 11,
+      "t": 1795690071.4393294,
+      "retry_after_s": 177.984,
+      "detail": "Error during completion: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199780, Requested 632. Please try again in 2m57.984s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_"
+    },
+    {
+      "condition": "library",
+      "index": 11,
+      "t": 1795690757.2289755,
+      "retry_after_s": 258.767999999,
+      "detail": "Error during completion: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199761, Requested 838. Please try again in 4m18.767999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_"
+    },
+    {
+      "condition": "library",
+      "index": 11,
+      "t": 1795691554.5613682,
+      "retry_after_s": 119.664,
+      "detail": "Error during completion: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199267, Requested 1010. Please try again in 1m59.664s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit"
     }
   ]
 }

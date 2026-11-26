@@ -1,11 +1,13 @@
 """
 The risk side of the pending timeout: the drop happens AFTER the backend committed.
 
-With a timeout and no status check, the record becomes UNRESOLVED and the guard lets one
-identical retry through. Whether that retry is harmless depends on the backend:
+With a timeout and no status check, the record becomes UNRESOLVED. By default the guard keeps
+blocking it, so nothing is duplicated. With allow_unverified_retry=True it lets one identical
+retry through, and whether that retry is harmless depends on the backend:
 
 - it ignores the idempotency key: the retry books a second time (a duplicate). This is
-  what the Phase 1b `--first-booking committed --pending-timeout 0` arm measured live.
+  what the Phase 1b `--first-booking committed --pending-timeout 0` arm measured live
+  (11/11 duplicates, run with the retry permitted).
 - it honours the key: the retry returns the original booking and nothing new is written.
 
 The retry must carry the SAME key as the first attempt, or no backend can de-duplicate it.
@@ -74,9 +76,10 @@ def call_tool(continuity, pending, backend, call_id, drop_after_commit=False):
     return "booked", result
 
 
-async def drop_after_commit_then_resume(tmp_path, backend):
+async def drop_after_commit_then_resume(tmp_path, backend, allow_unverified_retry=True):
     continuity = SessionContinuity(db_path=str(tmp_path / "sc.db"), secret="s",
-                                   pending_timeouts={"book_appointment": 0})
+                                   pending_timeouts={"book_appointment": 0},
+                                   allow_unverified_retry=allow_unverified_retry)
     pending = {}
     assert call_tool(continuity, pending, backend, "call_1", drop_after_commit=True)[0] == "dropped"
     await continuity.checkpoint(MockContext(), "sess", pending)
@@ -111,3 +114,27 @@ async def test_retry_after_commit_is_harmless_when_backend_honours_the_key(tmp_p
     assert backend.keys_seen[0] == backend.keys_seen[1]  # the retry reused the first key
     (rec,) = IdempotencyRegistry(pending).records.values()
     assert rec["status"] == "completed" and rec["result"]["confirmation"] == "CONF-001"
+
+
+@pytest.mark.asyncio
+async def test_default_keeps_the_committed_retry_blocked_so_nothing_duplicates(tmp_path):
+    """Without allow_unverified_retry, the same backend that duplicated above is never called again."""
+    backend = Backend(honour_keys=False)
+    continuity, pending = await drop_after_commit_then_resume(tmp_path, backend, allow_unverified_retry=False)
+    (rec,) = IdempotencyRegistry(pending).records.values()
+    assert rec["retry_permitted"] is False
+
+    assert call_tool(continuity, pending, backend, "call_2")[0] == "blocked"
+    assert call_tool(continuity, pending, backend, "call_3")[0] == "blocked"
+    assert len(backend.ledger) == 1 and len(backend.keys_seen) == 1
+
+
+@pytest.mark.asyncio
+async def test_opt_in_is_per_tool(tmp_path):
+    continuity = SessionContinuity(db_path=str(tmp_path / "sc.db"), secret="s",
+                                   pending_timeouts={"book_appointment": 0, "cancel_appointment": 0},
+                                   allow_unverified_retry=["book_appointment"])
+    assert continuity._unverified_retry_tools == {"book_appointment"}
+    continuity.set_pending_timeout("cancel_appointment", 0, allow_unverified_retry=True)
+    continuity.set_pending_timeout("book_appointment", 0)  # default: off again
+    assert continuity._unverified_retry_tools == {"cancel_appointment"}

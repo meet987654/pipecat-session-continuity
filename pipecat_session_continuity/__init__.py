@@ -68,8 +68,13 @@ class SessionContinuity:
         enable_opentelemetry: bool = False,
         metrics_exporter: Optional[BaseMetricsExporter] = None,
         allow_memory_fallback: bool = False,
+        allow_unverified_retry=False,
     ):
         """
+        allow_unverified_retry: for tools in pending_timeouts, whether a record that passes its
+        timeout without a verified outcome may be retried once (True for all of them, or an
+        iterable of tool names). Off by default; see set_pending_timeout.
+
         Storage fails closed: if the session store cannot be read, resume_or_start raises
         StorageUnavailableError instead of silently starting a fresh call (which would drop the
         idempotency records that block duplicate tool calls). allow_memory_fallback=True lets
@@ -106,11 +111,15 @@ class SessionContinuity:
         self._status_checks: Dict[str, Dict[str, Any]] = {}
         # Per-tool seconds after which a pending record stops blocking (see set_pending_timeout).
         self._pending_timeouts: Dict[str, float] = {}
+        self._unverified_retry_tools: set = set()
         for name, seconds in (pending_timeouts or {}).items():
-            self.set_pending_timeout(name, seconds)
+            allowed = (allow_unverified_retry is True) or (
+                not isinstance(allow_unverified_retry, bool) and name in set(allow_unverified_retry or ())
+            )
+            self.set_pending_timeout(name, seconds, allow_unverified_retry=allowed)
         self._warned_unresolvable: set = set()
 
-    def set_pending_timeout(self, tool_name: str, seconds: float) -> None:
+    def set_pending_timeout(self, tool_name: str, seconds: float, allow_unverified_retry: bool = False) -> None:
         """
         Stop a pending record for `tool_name` from blocking forever.
 
@@ -123,17 +132,30 @@ class SessionContinuity:
           - is first passed to the tool's status check, if one is registered, and
             resolved by its answer as usual;
           - otherwise (no status check, or one that could not answer) becomes
-            ``UNRESOLVED``: the resume notice tells the LLM the outcome is unknown and
-            to ask the caller whether to try the same request again, and the guard
-            lets one identical retry through.
+            ``UNRESOLVED``: the outcome was never verified. The resume notice tells the
+            LLM it is unknown, and to tell the caller it cannot be confirmed.
+
+        What happens to the retry depends on `allow_unverified_retry`:
+
+          - False (default): the record stays blocked. The caller is told the outcome
+            is unknown and that the request cannot be sent again on this call, but the
+            guard still blocks an identical retry. No duplicate; if the original never
+            happened, it is still lost, but no longer silently.
+          - True: the notice asks the caller whether to try the same request again, and
+            the guard lets one identical retry through under the same idempotency key.
+            Only safe if your backend de-duplicates on that key: in a live trial with a
+            backend that ignores it, the retry duplicated a booking that had gone
+            through in 11 of 11 calls. Prefer a status check.
 
         Pick `seconds` to be longer than the tool can take to land on your backend.
-        Note the trade-off: with no status check, if the original did go through and
-        your backend ignores idempotency keys, the caller's retry can duplicate it.
         """
         if seconds is None or seconds < 0:
             raise ValueError("pending timeout must be a number of seconds >= 0")
         self._pending_timeouts[tool_name] = float(seconds)
+        if allow_unverified_retry:
+            self._unverified_retry_tools.add(tool_name)
+        else:
+            self._unverified_retry_tools.discard(tool_name)
 
     def _warn_if_unresolvable(self, tool_name: str) -> None:
         if tool_name in self._warned_unresolvable:
@@ -141,12 +163,21 @@ class SessionContinuity:
         if tool_name in self._status_checks:
             return
         self._warned_unresolvable.add(tool_name)
-        if tool_name in self._pending_timeouts:
+        if tool_name in self._pending_timeouts and tool_name in self._unverified_retry_tools:
             logger.warning(
                 f"Tool '{tool_name}' is guarded but has no status check. After its "
                 f"{self._pending_timeouts[tool_name]:g}s pending timeout, an interrupted call becomes the caller's "
-                f"decision to retry; if the original did go through and the backend ignores idempotency keys, "
-                f"that retry can duplicate it. Register a status check (register_status_check) to avoid guessing."
+                f"decision to retry (allow_unverified_retry=True); if the original did go through and the backend "
+                f"ignores idempotency keys, that retry duplicates it. Register a status check (register_status_check) "
+                f"to avoid guessing."
+            )
+        elif tool_name in self._pending_timeouts:
+            logger.warning(
+                f"Tool '{tool_name}' is guarded but has no status check. After its "
+                f"{self._pending_timeouts[tool_name]:g}s pending timeout, an interrupted call is reported to the "
+                f"caller as unconfirmed but stays blocked, so if it never happened it is lost. Register a status "
+                f"check (register_status_check), or pass allow_unverified_retry=True if the backend de-duplicates "
+                f"on the idempotency key."
             )
         else:
             logger.warning(
@@ -250,9 +281,12 @@ class SessionContinuity:
                 rec["unresolved_reason"] = (
                     "status_check_inconclusive" if rec.get("status_check") == "inconclusive" else "no_status_check"
                 )
+                rec["retry_permitted"] = rec.get("tool_name") in self._unverified_retry_tools
                 logger.warning(
                     f"Pending '{rec.get('tool_name')}' ({rec.get('idempotency_key')}) passed its "
-                    f"{timeout:g}s pending timeout unresolved ({rec['unresolved_reason']}); asking the caller."
+                    f"{timeout:g}s pending timeout unresolved ({rec['unresolved_reason']}); "
+                    + ("asking the caller whether to retry." if rec["retry_permitted"]
+                       else "telling the caller; the retry stays blocked (allow_unverified_retry is off).")
                 )
 
     async def resume_or_start(
@@ -277,7 +311,8 @@ class SessionContinuity:
         inconclusive_tools: List[str] = []  # pending AND a status check could not resolve them
         confirmed_tools: List[str] = []  # a status check confirmed they happened
         not_done_tools: List[str] = []  # a status check confirmed they did not happen (retry allowed)
-        unresolved_tools: List[str] = []  # past pending_timeout, unresolved: the caller decides
+        unresolved_tools: List[str] = []  # past pending_timeout, unresolved, retry permitted: the caller decides
+        unresolved_blocked_tools: List[str] = []  # past pending_timeout, unresolved, retry still blocked
         try:
             restored_context = await self.manager.load_context(session_id)
 
@@ -301,7 +336,25 @@ class SessionContinuity:
                     args_desc = f" with arguments {args}" if args is not None else ""
                     status = tool_data.get("status")
 
-                    if status == UNRESOLVED:
+                    if status == UNRESOLVED and not tool_data.get("retry_permitted"):
+                        unresolved_blocked_tools.append(tool_name)
+                        checked = (
+                            " A status check could not tell either."
+                            if tool_data.get("unresolved_reason") == "status_check_inconclusive" else ""
+                        )
+                        sys_msg = {
+                            "role": "system",
+                            "content": (
+                                f"[System Notice: The connection dropped while executing the tool '{tool_name}'{args_desc}. "
+                                f"Its outcome is unknown: it may have gone through or it may not have.{checked} "
+                                f"It cannot be sent again on this call. Tell the user that you cannot confirm whether it "
+                                f"went through and that you cannot submit the same request again on this call. Do NOT call "
+                                f"'{tool_name}' again. Do not say it succeeded and do not say it failed, and do not offer a "
+                                f"different time, day or other details instead.]"
+                            )
+                        }
+                        context.add_message(sys_msg)
+                    elif status == UNRESOLVED:
                         unresolved_tools.append(tool_name)
                         checked = (
                             " A status check could not tell either."
@@ -406,7 +459,14 @@ class SessionContinuity:
                     "content": "[System Notice: A new user has just connected to the voice call. Please greet them warmly and ask how you can help.]"
                 }
 
-            if is_resumed and unresolved_tools and not unconfirmed_tools:
+            if is_resumed and unresolved_blocked_tools and not unconfirmed_tools and not unresolved_tools:
+                names = ", ".join(f"'{n}'" for n in dict.fromkeys(unresolved_blocked_tools))
+                msg["content"] = msg["content"].rstrip("]") + (
+                    f" Before anything else, tell the user that their request ({names}) was interrupted by the "
+                    f"disconnect, that you cannot confirm whether it went through, and that you cannot submit it again "
+                    f"on this call. Do not say it succeeded and do not say it failed. Do not call the tool again.]"
+                )
+            elif is_resumed and unresolved_tools and not unconfirmed_tools:
                 # Past its pending timeout with no answer: surface it as the caller's decision,
                 # not a block. Retrying the same request is allowed once; steering is not asked for.
                 names = ", ".join(f"'{n}'" for n in dict.fromkeys(unresolved_tools))
@@ -493,9 +553,10 @@ class SessionContinuity:
                 client_token=client_token,
             )
 
-        if is_dup and rec is not None and rec.get("status") == UNRESOLVED:
-            # Past its pending timeout and unresolved: the caller decides, so the identical
-            # retry is allowed (record_tool_call then consumes it and the record is pending again).
+        if is_dup and rec is not None and rec.get("status") == UNRESOLVED and rec.get("retry_permitted"):
+            # Past its pending timeout, unresolved, and the app opted in (allow_unverified_retry):
+            # the caller decides, so the identical retry is allowed (record_tool_call then consumes
+            # it and the record is pending again). Without the opt-in it stays blocked.
             is_dup = False
         if is_dup:
             self.metrics.record_tool_call(tool_name, status="duplicate")

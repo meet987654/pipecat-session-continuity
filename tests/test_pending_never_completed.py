@@ -7,8 +7,10 @@ loses the booking. A warning is logged the first time such a tool is guarded.
 
 With a per-tool pending timeout: once it passes, the record is first given to the
 tool's status check if one is registered; otherwise (or if the check cannot answer) it
-becomes UNRESOLVED, the resume notice asks the caller whether to retry the same request,
-and the guard lets one identical retry through.
+becomes UNRESOLVED. By default it stays blocked and the caller is told the outcome is
+unknown. Only with allow_unverified_retry=True does the notice ask the caller whether to
+retry, and the guard lets one identical retry through (it duplicates if the original did
+go through and the backend ignores the key: see test_timeout_after_commit.py).
 """
 import logging
 import asyncio
@@ -72,9 +74,10 @@ def call_tool(continuity, pending, ledger, args, call_id, drop_before_commit=Fal
     return "booked"
 
 
-async def drop_then_resume(tmp_path, ttl_seconds=3600, hook=None, retry_on_not_found=False, pending_timeouts=None):
+async def drop_then_resume(tmp_path, ttl_seconds=3600, hook=None, retry_on_not_found=False, pending_timeouts=None,
+                           allow_unverified_retry=False):
     continuity = SessionContinuity(db_path=str(tmp_path / "sc.db"), secret="s", ttl_seconds=ttl_seconds,
-                                   pending_timeouts=pending_timeouts)
+                                   pending_timeouts=pending_timeouts, allow_unverified_retry=allow_unverified_retry)
     if hook:
         continuity.register_status_check("book_appointment", hook, retry_on_not_found=retry_on_not_found)
     ledger, pending = Ledger(), {}
@@ -137,9 +140,38 @@ async def test_default_still_blocks_a_30_day_old_record_and_warns(tmp_path, capl
 
 
 @pytest.mark.asyncio
-async def test_30_day_old_record_without_status_check_escalates_to_unresolved(tmp_path, caplog):
+async def test_expired_record_without_opt_in_escalates_but_stays_blocked(tmp_path, caplog):
+    """Default: the caller is told it is unconfirmed, but no unverified retry is let through."""
     with caplog.at_level(logging.WARNING, logger="pipecat_session_continuity"):
         continuity, ledger = await drop_then_resume(tmp_path, pending_timeouts={"book_appointment": 30})
+    assert any("stays blocked" in m and "allow_unverified_retry" in m for m in caplog.messages)
+    await age_records(continuity, 30 * 86400)
+
+    _, pending, ctx = await resume(continuity)
+    (rec,) = IdempotencyRegistry(pending).records.values()
+    assert rec["status"] == UNRESOLVED and rec["retry_permitted"] is False
+    (notice,) = notices(ctx)
+    assert "outcome is unknown" in notice
+    assert "cannot submit the same request again" in notice and "Do NOT call" in notice
+    assert "try the same request again with the same details" not in notice
+
+    assert call_tool(continuity, pending, ledger, ARGS, "call_2") == "blocked"
+    assert call_tool(continuity, pending, ledger, ARGS, "call_3") == "blocked"
+    assert ledger.bookings == []
+    (rec,) = IdempotencyRegistry(pending).records.values()
+    assert rec["status"] == UNRESOLVED  # a blocked attempt must not consume or reset it
+
+    # Still blocked after another checkpoint and reconnect.
+    await continuity.checkpoint(MockContext(), "sess", pending)
+    _, pending, _ = await resume(continuity)
+    assert call_tool(continuity, pending, ledger, ARGS, "call_4") == "blocked"
+
+
+@pytest.mark.asyncio
+async def test_30_day_old_record_with_opt_in_allows_one_retry(tmp_path, caplog):
+    with caplog.at_level(logging.WARNING, logger="pipecat_session_continuity"):
+        continuity, ledger = await drop_then_resume(tmp_path, pending_timeouts={"book_appointment": 30},
+                                                    allow_unverified_retry=True)
     assert not any("no status check and no pending timeout" in m for m in caplog.messages)
     assert any("has no status check" in m and "caller's decision" in m for m in caplog.messages)
     await age_records(continuity, 30 * 86400)
@@ -158,7 +190,8 @@ async def test_30_day_old_record_without_status_check_escalates_to_unresolved(tm
 
 @pytest.mark.asyncio
 async def test_unresolved_notice_asks_the_caller_and_does_not_forbid_the_retry(tmp_path):
-    continuity, _ = await drop_then_resume(tmp_path, pending_timeouts={"book_appointment": 0})
+    continuity, _ = await drop_then_resume(tmp_path, pending_timeouts={"book_appointment": 0},
+                                           allow_unverified_retry=True)
     resumed, _, ctx = await resume(continuity)
     (notice,) = notices(ctx)
     assert "Do NOT call this tool again" not in notice
@@ -215,6 +248,18 @@ async def test_timed_out_record_with_inconclusive_status_check_escalates(tmp_pat
     (rec,) = IdempotencyRegistry(pending).records.values()
     assert rec["status"] == UNRESOLVED and rec["unresolved_reason"] == "status_check_inconclusive"
     assert "A status check could not tell either" in notices(ctx)[0]
+    # A check that could not answer verified nothing: without the opt-in, still blocked.
+    assert call_tool(continuity, pending, ledger, ARGS, "call_2") == "blocked"
+
+
+@pytest.mark.asyncio
+async def test_inconclusive_status_check_with_opt_in_allows_one_retry(tmp_path):
+    async def lookup(key, args):
+        return "unknown"
+
+    continuity, ledger = await drop_then_resume(tmp_path, hook=lookup, pending_timeouts={"book_appointment": 0},
+                                                allow_unverified_retry=True)
+    _, pending, _ = await resume(continuity)
     assert call_tool(continuity, pending, ledger, ARGS, "call_2") == "booked"
 
 
