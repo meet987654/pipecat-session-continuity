@@ -44,3 +44,6 @@ Issues = "https://github.com/meet987654/pipecat-session-continuity/issues"
 [tool.setuptools]
 packages = ["pipecat_session_continuity", "pipecat_session_continuity.storage"]
 include-package-data = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

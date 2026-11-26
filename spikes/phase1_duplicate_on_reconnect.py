@@ -744,7 +744,8 @@ async def main():
             attempts = 0  # behavioural re-tries (e.g. no tool call in session 1); infra re-tries don't count
             while True:
                 try:
-                    r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts + 1}", a.turns, a.resolver, a.first_booking)
+                    r = await run_trial(cond, a.model, a.reask, db_dir, f"{i}-{attempts + 1}", a.turns, a.resolver, a.first_booking,
+                                        a.pending_timeout)
                     if r["valid"] and a.judge_during_run:
                         await annotate(a.model, r)
                 except HarnessError as e:
