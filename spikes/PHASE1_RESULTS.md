@@ -2,7 +2,7 @@
 
 Throwaway spike, `spikes/phase1_duplicate_on_reconnect.py --conditions library --turns 3`.
 Model `openai/gpt-oss-120b` on Groq, all arms. 95% Wilson intervals. The `run_llm` bug in
-`resume_or_start` is left unfixed in every arm. Unless a section says otherwise, the first booking
+`resume_or_start` is left unfixed in every arm below (fixed in the library for 0.4.0, after these runs). Unless a section says otherwise, the first booking
 **committed** before the drop (`--first-booking committed`), so the ledger truth is "booked". The
 not-committed arms are in "Drop before commit" below.
 
@@ -143,6 +143,33 @@ Files: `phase1b_results_insist_not_committed_nc.json`, `phase1b_results_insist_p
 
 Runner bug found before this run: `main()` parsed `--pending-timeout` but did not pass it to `run_trial`, so the
 timeout arm would have run as the baseline under the `_pt0` file name. Fixed in b76b3e5 before any `_pt0` trial.
+
+### Committed, pending timeout 0, no resolver: the risk side (partial, n=10 of 20)
+
+`--first-booking committed --pending-timeout 0`, insist, `phase1b_results_insist_pt0.json`. Run with the `run_llm`
+bridge bug still unfixed (the extra empty `run_llm` nudge), like every earlier arm. Stopped by the daily token cap
+after 10 trials.
+
+| n | Duplicates | Loss | Permitted retry | Guard engaged | Other slot | False claim |
+|---|---|---|---|---|---|---|
+| 10 | **10/10 (0.72-1.00)** | 0/10 (0.00-0.28) | 10/10 | 3/10 | 0/10 | 0/10 (0.00-0.28), by eye; not judged yet |
+
+Prediction confirmed: the mock backend ignores the idempotency key, so the one permitted retry books a second time
+in every trial. The guard engaged in 3 of 10, each time blocking a *third* call, so no trial got more than 2 bookings.
+Every closing quotes `CONF-002`: the caller is told about one booking while two exist. That is a true "booked"
+claim, so the claim rubric does not count it, but it hides the duplicate. Compare the committed baseline
+(insist/none): duplicates 0/13 re-attempts, because the guard blocks the retry.
+
+The opposite case is covered with zero tokens in `tests/test_timeout_after_commit.py`: with a backend that honours the
+key, the retry carries the same key and gets the original `CONF-001` back, and the ledger holds one booking.
+
+**To finish trials 10-19 comparably**, run them on the pre-fix code; `main` now has the `run_llm` fix, and the spike
+no longer sends the nudge. The spike imports the library from its own checkout, so a worktree pins both:
+
+    git worktree add ../sc-phase1b ebe8dcf
+    cp .env ../sc-phase1b/
+    .venv/Scripts/python ../sc-phase1b/spikes/phase1_duplicate_on_reconnect.py --conditions library --turns 3         --reask insist --first-booking committed --pending-timeout 0 --trials 20         --out spikes/phase1b_results_insist_pt0.json
+    .venv/Scripts/python spikes/phase1_duplicate_on_reconnect.py --rescore spikes/phase1b_results_insist_pt0.json
 
 ## Open scope question: re-booking with different arguments
 
