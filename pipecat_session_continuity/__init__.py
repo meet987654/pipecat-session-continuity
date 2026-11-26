@@ -439,7 +439,9 @@ class SessionContinuity:
                     parts.append(f"tell the user that their request ({names}) did not go through, and offer to try it once more")
                 msg["content"] = msg["content"].rstrip("]") + " Before anything else, " + "; and ".join(parts) + ".]"
 
-            await task.queue_frames([LLMMessagesAppendFrame([msg])])
+            # run_llm=True: without it the bridge message only sits in the context and the agent
+            # stays silent after a reconnect until the caller speaks.
+            await task.queue_frames([LLMMessagesAppendFrame([msg], run_llm=True)])
             elapsed_ms = (time.time() - start_time) * 1000
             self.metrics.record_resume(elapsed_ms, is_resumed=is_resumed, status="success")
             if is_resumed:

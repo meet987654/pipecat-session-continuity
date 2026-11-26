@@ -449,8 +449,8 @@ async def run_trial(condition, model, reask, db_dir, idx, turns=2, resolver="non
         pending.update(pending_restored)
         out["resumed"] = is_resumed
         out["resume_statuses"] = sorted({v.get("status") for v in pending.values() if isinstance(v, dict)})
-        # resume_or_start queues a bridge message; let the agent answer it first.
-        await s2.task.queue_frames([LLMMessagesAppendFrame([], run_llm=True)])
+        # resume_or_start queues the bridge message with run_llm=True (fixed after Phase 1b; every arm
+        # up to phase1b_results_insist_pt0.json ran with an extra empty run_llm nudge here instead).
         await s2.wait_settled(0, 0, timeout=45)
     ends0, calls0 = s2.tap.response_ends, s2.tap.tool_calls
     await s2.say(REASKS[reask])

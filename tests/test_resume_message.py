@@ -150,3 +150,18 @@ async def test_no_hook_keeps_ask_the_caller_wording(tmp_path):
     await sc.resume_or_start(task, ctx, "s")
     assert "could not determine" not in _notice(ctx)
     assert "received a confirmation" in task.frames[0].messages[0]["content"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("resumed", [True, False])
+async def test_bridge_or_greet_message_triggers_the_llm(tmp_path, resumed):
+    """Regression: the frame was queued without run_llm=True, so after a reconnect the agent
+    said nothing until the caller spoke. Both the resume bridge and the fresh greeting must run."""
+    sc = SessionContinuity(db_path=str(tmp_path / "r.db"), secret="x")
+    if resumed:
+        await sc.manager.save_context("s", [{"role": "user", "content": "hi"}], {})
+    task = Task()
+    is_resumed, _ = await _resume(sc, task)
+    assert is_resumed is resumed
+    (frame,) = task.frames
+    assert frame.run_llm is True
