@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import List, Dict, Any, Optional
 
-from .storage.base import BaseStorage
+from .storage.base import BaseStorage, StorageUnavailableError
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ class SessionContinuityManager:
         db_path: Optional[str] = None,
         ttl_seconds: int = 3600,
         metrics_exporter: Optional[Any] = None,
+        allow_memory_fallback: bool = False,
     ):
         self.ttl_seconds = ttl_seconds
         self.checkpoint_times = []
@@ -35,7 +36,7 @@ class SessionContinuityManager:
             self.storage = storage_backend
         elif redis_url:
             from .storage.redis_storage import RedisStorage
-            self.storage = RedisStorage(redis_url=redis_url)
+            self.storage = RedisStorage(redis_url=redis_url, allow_memory_fallback=allow_memory_fallback)
         else:
             from .storage.sqlite_storage import SQLiteStorage
             path = db_path or "pipecat_sessions.db"
@@ -82,7 +83,9 @@ class SessionContinuityManager:
     async def load_context(self, session_id: str) -> Optional[Dict[str, Any]]:
         """
         Attempts to retrieve the conversation history and tool state.
-        Returns a dictionary with 'messages' and 'pending_tool_calls' if found, else None.
+        Returns a dictionary with 'messages' and 'pending_tool_calls' if found, None if there is
+        no live session. Fails closed: if storage cannot be read, or the record cannot be
+        parsed, raises StorageUnavailableError instead of reporting "no session".
         """
         if not session_id:
             return None
@@ -90,7 +93,14 @@ class SessionContinuityManager:
         key = self._get_key(session_id)
         try:
             data = await self.storage.load(key)
-                
+        except StorageUnavailableError:
+            logger.error(f"Storage unavailable while loading session {session_id}; not starting fresh.")
+            raise
+        except Exception as e:  # a custom backend's own error type
+            logger.error(f"Storage unavailable while loading session {session_id}; not starting fresh: {e}")
+            raise StorageUnavailableError(f"Failed to load session {session_id}: {e}") from e
+
+        try:
             if data:
                 parsed = json.loads(data)
                 
@@ -105,9 +115,9 @@ class SessionContinuityManager:
             else:
                 logger.info(f"No active session found for {session_id}.")
                 return None
-        except Exception as e:
-            logger.error(f"Error loading context for session {session_id}: {e}")
-            return None
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.error(f"Stored session {session_id} could not be parsed; not starting fresh: {e}")
+            raise StorageUnavailableError(f"Stored session {session_id} is corrupt: {e}") from e
 
     async def clear_context(self, session_id: str):
         """

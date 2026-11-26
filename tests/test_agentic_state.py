@@ -22,7 +22,7 @@ class MockTask:
 
 @pytest.mark.asyncio
 async def test_tool_call_hallucination_mitigation():
-    continuity = SessionContinuity(redis_url="redis://invalid-host-so-it-falls-back:6379", ttl_seconds=60)
+    continuity = SessionContinuity(redis_url="redis://invalid-host-so-it-falls-back:6379", allow_memory_fallback=True, ttl_seconds=60)
     session_id = "test_tool_hallucination"
     
     # 1. Save context with a pending tool call
@@ -56,7 +56,7 @@ async def test_tool_call_hallucination_mitigation():
 @pytest.mark.asyncio
 async def test_staleness_boundary():
     # Set a 30-minute threshold for stale sessions
-    continuity = SessionContinuity(redis_url="redis://invalid-host-so-it-falls-back:6379", ttl_seconds=3600, stale_threshold_minutes=30)
+    continuity = SessionContinuity(redis_url="redis://invalid-host-so-it-falls-back:6379", allow_memory_fallback=True, ttl_seconds=3600, stale_threshold_minutes=30)
     
     # Test Case 1: UNDER the threshold (Recent Drop)
     session_id_recent = "test_recent"

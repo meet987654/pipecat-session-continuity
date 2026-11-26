@@ -10,7 +10,7 @@ def manager(request):
     """Returns a SessionContinuityManager configured with either Redis or SQLite."""
     if request.param == "redis":
         redis_url = os.getenv("REDIS_URL", "redis://invalid-host-so-it-falls-back:6379")
-        storage = RedisStorage(redis_url=redis_url)
+        storage = RedisStorage(redis_url=redis_url, allow_memory_fallback=True)
     else:
         # SQLite storage (use a temporary DB for tests)
         storage = SQLiteStorage(db_path="test_sessions.db")

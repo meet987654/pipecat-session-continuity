@@ -121,7 +121,7 @@ class IdempotencyRegistry:
             }
             if "attempts" in val:
                 record["attempts"] = val["attempts"]
-            for extra in ("confirmed_by", "unresolved_reason"):
+            for extra in ("confirmed_by", "unresolved_reason", "retry_permitted"):
                 if extra in val:
                     record[extra] = val[extra]
 
@@ -150,12 +150,15 @@ class IdempotencyRegistry:
         now = time.time()
         if idemp_key in self.records:
             record = self.records[idemp_key]
-            if record.get("status") in (RETRY_ALLOWED, UNRESOLVED):
-                # A status check proved the action did not happen, or the record
-                # outlived its pending_timeout unresolved and the caller chose to
-                # retry: the one permitted retry, under the SAME idempotency key.
+            status = record.get("status")
+            if status == RETRY_ALLOWED or (status == UNRESOLVED and record.get("retry_permitted")):
+                # A status check proved the action did not happen, or the record outlived
+                # its pending_timeout unresolved, the app opted in to an unverified retry
+                # (allow_unverified_retry) and the caller chose to retry: the one permitted
+                # retry, under the SAME idempotency key.
                 record["status"] = "pending"
                 record["attempts"] = record.get("attempts", 1) + 1
+                record.pop("retry_permitted", None)
             if tool_call_id:
                 record["tool_call_id"] = tool_call_id
                 self._call_id_to_key[tool_call_id] = idemp_key

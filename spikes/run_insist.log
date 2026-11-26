@@ -1,0 +1,68 @@
+stock    trial  0: DUP  bookings=2  
+stock    trial  1: DUP  bookings=2  
+stock    trial  2: DUP  bookings=2  
+stock    trial  3: DUP  bookings=2  
+stock    trial  4: DUP  bookings=2  
+stock    trial  5: DUP  bookings=2  
+stock    trial  6: DUP  bookings=2  
+stock    trial  7: DUP  bookings=2  
+stock    trial  8: DUP  bookings=2  
+stock    trial  9: DUP  bookings=2  
+stock    trial 10: DUP  bookings=2  
+stock    trial 11: DUP  bookings=2  
+stock    trial 12: DUP  bookings=2  
+stock    trial 13: DUP  bookings=2  
+stock    trial 14: DUP  bookings=2  
+stock    trial 15: DUP  bookings=2  
+stock    trial 16: DUP  bookings=2  
+stock    trial 17: DUP  bookings=2  
+stock    trial 18: DUP  bookings=2  
+stock    trial 19: DUP  bookings=2  
+naive    trial  0: ok   bookings=1  
+naive    trial  1: DUP  bookings=2  
+naive    trial  2: ok   bookings=1  
+naive    trial  3: DUP  bookings=2  
+naive    trial  4: DUP  bookings=2  
+naive    trial  5: ok   bookings=1  
+naive    trial  6: ok   bookings=1  
+naive    trial  7: DUP  bookings=2  
+naive    trial  8: ok   bookings=1  
+naive    trial  9: DUP  bookings=2  
+naive    trial 10: DUP  bookings=2  
+naive    trial 11: ok   bookings=1  
+naive    trial 12: DUP  bookings=2  
+naive    trial 13: DUP  bookings=2  
+naive    trial 14: ok   bookings=1  
+naive    trial 15: DUP  bookings=2  
+naive    trial 16: ok   bookings=1  
+naive    trial 17: ok   bookings=1  
+naive    trial 18: DUP  bookings=2  
+naive    trial 19: DUP  bookings=2  
+library  trial  0: ok   bookings=1  
+library  trial  1: ok   bookings=1  
+library  trial  2: ok   bookings=1  
+library  trial  3: ok   bookings=1  
+library  trial  4: ok   bookings=1  
+library  trial  5: ok   bookings=1  
+library  trial  6: ok   bookings=1  
+library  trial  7: ok   bookings=1  
+library  trial  8: ok   bookings=1  
+library  trial  9: ok   bookings=1  
+library  trial 10: ok   bookings=1  
+library  trial 11: ok   bookings=1  
+library  trial 12: ok   bookings=1  
+library  trial 13: ok   bookings=1  
+library  trial 14: ok   bookings=1  
+library  trial 15: ok   bookings=1  
+library  trial 16: ok   bookings=1  
+library  trial 17: ok   bookings=1  
+library  trial 18: ok   bookings=1  
+library  trial 19: ok   bookings=1  
+
+model=openai/gpt-oss-120b  reask=insist
+condition  valid  dup  rate  95% Wilson CI   invalid
+stock         20   20  1.00  0.84-1.00      0
+naive         20   11  0.55  0.34-0.74      0
+library       20    0  0.00  0.00-0.16      0
+
+per-trial detail: C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1_results_insist.json

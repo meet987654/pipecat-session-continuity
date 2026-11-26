@@ -1,0 +1,1261 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "reask": "insist",
+  "results": [
+    {
+      "condition": "stock",
+      "trial": "0-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "1-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fpm, Priya. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "2-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fp.m., Priya Shah. Confirmation: CONF-002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "3-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fpm, Priya. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "4-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fp.m., Priya Shah. Confirmation: CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "5-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fp.m., Priya Shah. Confirmation: CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "6-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "7-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Confirmation:\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "8-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fp.m., Priya Shah. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "9-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation number is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "10-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation code is CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "11-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation number is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "12-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fp.m., Priya. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "13-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation code is CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "14-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation code is CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "15-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fp.m., Priya Shah. Your confirmation number is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "16-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Confirmation: CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "17-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fp.m., Priya Shah. Confirmation: CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "18-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Confirmation:\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "stock",
+      "trial": "19-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Confirmation: CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "0-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is all set for Thursday at 3\u202fp.m., Priya.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "1-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya. Your confirmation number is CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "2-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fp.m., Priya. See you then!",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "3-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Your confirmation code is CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "4-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your cleaning is booked for Thursday at 3\u202fPM, Priya. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "5-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fp.m., Priya.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "6-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fp.m., Priya.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "7-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "8-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your appointment is confirmed for Thursday at 3\u202fp.m., Pri\u202fShah.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "9-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "10-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "11-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "12-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "13-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation code is CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "14-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "15-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Your confirmation number is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "16-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fp.m., Priya.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "17-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fp.m., Priya Shah.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "18-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "naive",
+      "trial": "19-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "s2_text": "Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation code is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "0-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted by a disconnect, so I can\u2019t confirm if it went through. Did you receive a confirmation for your Thursday 3\u202fp.m. cleaning?Got it. Would you like me to try booking the Thursday 3\u202fp.m. cleaning again?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "1-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I saw the connection dropped while processing your appointment request, so I can\u2019t confirm if it went through. Did you receive a confirmation?Got it. Just to confirm, should I try booking the Thursday\u202f3\u202fpm cleaning for Priya\u202fShah again?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "2-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted by a disconnect, so I can\u2019t confirm if it went through. Did you receive a confirmation for your Thursday 3\u202fpm cleaning?Sure thing\u2014just to confirm, would you like me to try booking your Thursday\u202f3\u202fpm cleaning again under the name Priya Shah?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "3-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m back\u2014your appointment request was interrupted by the disconnect, so I can\u2019t confirm if it went through. Did you receive a confirmation?Just to confirm\u2014should I go ahead and try booking your Thursday\u202f3\u202fp.m. cleaning now?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "4-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted by the disconnect, so I can\u2019t confirm whether it went through. Did you receive a confirmation for your Thursday 3\u202fp.m. cleaning?Sure thing\u2014just to confirm, would you like me to try booking the Thursday\u202f3\u202fp.m. cleaning again for Priya Shah?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "5-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m back\u2014your appointment request was interrupted by the disconnect, so I can\u2019t confirm if it went through. Did you receive a confirmation?Just to confirm\u2014you\u2019d like me to try booking a teeth\u2011cleaning appointment for Thursday at\u202f3\u202fPM under the name\u202fPriya Shah?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "6-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted by the disconnect, so I can\u2019t confirm if it went through. Did you receive a confirmation?Sure thing! Just to confirm\u2014I\u2019ll try to book your Thursday 3\u202fp.m. teeth cleaning for Priya\u202fShah again. Should I go ahead?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "7-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m back online\u2014your appointment request was interrupted, so I can\u2019t confirm whether it went through. Did you receive a confirmation for your Thursday 3\u202fp.m. cleaning?Got it. Just to be sure\u2014I\u2019ll need your go\u2011ahead to try booking it again. Should I go ahead and re\u2011book the Thursday 3\u202fp.m. cleaning for Priya Shah?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "8-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m back after a brief disconnect\u2014your appointment request was interrupted, so I can\u2019t confirm if it went through. Did you receive a confirmation?I\u2019m sorry the connection dropped, so I don\u2019t know if the booking went through. Would you like me to try scheduling the Thursday\u202f3\u202fp.m. cleaning again?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "9-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted by a disconnect, so I can\u2019t confirm if it went through. Did you receive a confirmation, or would you like me to try again?Sure thing\u2014just to confirm, should I go ahead and try booking the Thursday\u202f3\u202fp.m. cleaning for Priya Shah again?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "10-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m back after the brief disconnect\u2014your appointment request was interrupted, so I can\u2019t confirm whether it went through. Did you receive a confirmation?I understand the call dropped, and I can\u2019t confirm if the Thursday 3\u202fPM cleaning was booked. Would you like me to try scheduling it again?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "11-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m back after a brief disconnect\u2014your appointment request was interrupted, so I can\u2019t confirm if it went through. Did you receive a confirmation?Just to confirm\u2014should I go ahead and book a teeth\u2011cleaning for Priya\u202fShah this Thursday at 3\u202fpm?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "12-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m sorry\u2014the connection dropped while I was processing your Thursday 3\u202fp.m. cleaning request, so I can\u2019t confirm whether it went through. Did you receive a confirmation, or would you like me to try again?Just to confirm\u2014I\u2019ll try booking your Thursday\u202f3\u202fp.m. cleaning for Priya Shah again. Should I go ahead?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "13-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "Sorry, the connection dropped while I was booking your appointment, so I can\u2019t confirm if it went through. Did you receive a confirmation?I\u2019m resuming the request, but the previous booking attempt was interrupted, so I don\u2019t know if it succeeded. May I go ahead and try booking the Thursday 3\u202fpm cleaning for Priya Shah again?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "14-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m sorry\u2014the connection dropped while I was trying to book your Thursday 3\u202fpm cleaning, so I can\u2019t confirm if it went through. Did you receive a confirmation? Let me know how you\u2019d like to proceed.Got it. I\u2019ll try to book it again. Should I go ahead and submit the appointment for Thursday at 3\u202fpm under the name Priya\u202fShah?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "15-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m back online\u2014your appointment request was interrupted by the disconnect, so I can\u2019t confirm if it went through. Did you receive a confirmation?Would you like me to try booking the appointment again?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "16-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m back online\u2014your appointment request was interrupted, so I can\u2019t confirm whether it went through. Did you receive a confirmation?I wasn\u2019t able to confirm the booking. Would you like me to try scheduling the teeth\u2011cleaning appointment for Thursday at 3\u202fPM under the name Priya Shah?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "17-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m back\u2014your request to book a Thursday 3\u202fpm cleaning was interrupted, so I can\u2019t confirm if it went through. Did you receive a confirmation?Would you like me to try booking the Thursday\u202f3\u202fpm cleaning for you again?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "18-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m back after a brief disconnect\u2014your appointment request was interrupted, so I can\u2019t confirm if it went through. Did you receive a confirmation?I understand the earlier request didn\u2019t finish. May I go ahead and try booking the Thursday\u202f3\u202fp.m. cleaning for Priya\u202fShah again?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    },
+    {
+      "condition": "library",
+      "trial": "19-1",
+      "valid": true,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted by a disconnect, so I can\u2019t confirm if it went through. Did you receive a confirmation for your Thursday 3\u202fp.m. cleaning?Got it. Just to confirm\u2014I should go ahead and book a teeth\u2011cleaning appointment for Priya\u202fShah on Thursday at 3\u202fp.m.?",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 1,
+      "duplicate": false,
+      "guard_suppressed": 0,
+      "attempts": 1
+    }
+  ]
+}

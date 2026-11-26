@@ -5,7 +5,7 @@ import threading
 import time
 from typing import Optional
 
-from .base import BaseStorage
+from .base import BaseStorage, StorageUnavailableError
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ class SQLiteStorage(BaseStorage):
         try:
             await asyncio.to_thread(self._save_sync, key, value, ttl_seconds)
         except Exception as e:
-            logger.error(f"Failed to save context to SQLite: {e}")
+            raise StorageUnavailableError(f"Failed to save context to SQLite at {self.db_path}: {e}") from e
 
     def _load_sync(self, key: str) -> Optional[str]:
         with self._lock if self.is_memory else threading.Lock():
@@ -124,8 +124,7 @@ class SQLiteStorage(BaseStorage):
         try:
             return await asyncio.to_thread(self._load_sync, key)
         except Exception as e:
-            logger.error(f"Failed to load context from SQLite: {e}")
-            return None
+            raise StorageUnavailableError(f"Failed to load context from SQLite at {self.db_path}: {e}") from e
 
     def _delete_sync(self, key: str) -> None:
         with self._lock if self.is_memory else threading.Lock():
@@ -142,7 +141,7 @@ class SQLiteStorage(BaseStorage):
         try:
             await asyncio.to_thread(self._delete_sync, key)
         except Exception as e:
-            logger.error(f"Failed to clear context in SQLite: {e}")
+            raise StorageUnavailableError(f"Failed to clear context in SQLite at {self.db_path}: {e}") from e
 
     def purge_expired(self) -> int:
         """
