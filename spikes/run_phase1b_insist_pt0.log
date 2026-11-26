@@ -1,0 +1,62 @@
+[32m2026-11-26 15:59:23.180[0m | [1mINFO    [0m | [36mpipecat[0m:[36m<module>[0m:[36m54[0m - [1m\u14da\u160f\u15e2 Pipecat 1.5.0 (Python 3.13.7 (main, Sep 18 2025, 19:43:45) [MSC v.1944 64 bit (AMD64)]) \u14da\u160f\u15e2[0m
+C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1_duplicate_on_reconnect.py:295: DeprecationWarning: `PipelineTask` is deprecated since 1.3.0 and will be removed in 2.0.0. Use `PipelineWorker` instead.
+  self.task = PipelineTask(pipeline, params=PipelineParams(enable_metrics=True, enable_usage_metrics=True),
+C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1_duplicate_on_reconnect.py:297: DeprecationWarning: `PipelineRunner` is deprecated since 1.3.0 and will be removed in 2.0.0. Use `WorkerRunner` instead.
+  self.runner = PipelineRunner(handle_sigint=False, check_dangling_tasks=False)
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+budget: 20 trials x ~5,721 tokens = ~114,417 tokens (daily cap 200,000); ~199 requests (daily cap 1,000). Per-trial cost from 45 recorded trials (agent only).
+         Groq reports 677 requests left today. Tokens left today is not reported until a 429.
+library  trial  0: DUP  bookings=2  guard=1  judge=None  kind=None  mention=None  tokens=7896  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  1: DUP  bookings=2  guard=0  judge=None  kind=None  mention=None  tokens=6236  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  2: DUP  bookings=2  guard=0  judge=None  kind=None  mention=None  tokens=6042  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  3: DUP  bookings=2  guard=0  judge=None  kind=None  mention=None  tokens=6480  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  4: DUP  bookings=2  guard=0  judge=None  kind=None  mention=None  tokens=6328  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  5: DUP  bookings=2  guard=2  judge=None  kind=None  mention=None  tokens=9844  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  6: DUP  bookings=2  guard=2  judge=None  kind=None  mention=None  tokens=9694  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  7: DUP  bookings=2  guard=0  judge=None  kind=None  mention=None  tokens=5994  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  8: DUP  bookings=2  guard=0  judge=None  kind=None  mention=None  tokens=6238  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  9: DUP  bookings=2  guard=0  judge=None  kind=None  mention=None  tokens=6276  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+[32m2026-11-26 16:01:55.085[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36mpush_error_frame[0m:[36m721[0m - [31m[1mGroqLLMService#21 exception (C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\.venv\Lib\site-packages\openai\_base_client.py:1716): Error during completion: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01k4aza3gnfydach4442npgje2` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199521, Requested 775. Please try again in 2m7.872s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}[0m
+[32m2026-11-26 16:01:55.088[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.worker[0m:[36m_source_push_frame[0m:[36m1158[0m - [33m[1mPipelineTask#21: Something went wrong: ErrorFrame#0(error: Error during completion: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01k4aza3gnfydach4442npgje2` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199521, Requested 775. Please try again in 2m7.872s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}, fatal: False)[0m
+
+STOPPED cleanly: daily cap reached (128s until the next request fits, not a whole trial; the window is rolling). 10 trials saved; rerun the same command to resume.
+
+model=openai/gpt-oss-120b  reask=insist  turns=3  resolver=none  pending_timeout=0.0
+
+library: 10 valid, 0 invalid  (10 not judged yet: judge-based rows below undercount; run --rescore)
+  duplicate       10/10  0.72-1.00
+  attempted       10/10  0.72-1.00
+  guard engaged    3/10  0.11-0.60
+  loss             0/10  0.00-0.28
+  other slot booked  0/10  0.00-0.28
+  permitted retry 10/10  0.72-1.00
+  steers (judge)   0/10  0.00-0.28
+  false claim      0/10  0.00-0.28
+    fab. success   0/10  0.00-0.28
+    fab. failure   0/10  0.00-0.28
+  duplicates among trials that re-attempted: 10/10  (blocked: 3/10); never attempted: 0
+  judge labels    {None: 10}
+
+per-trial detail: C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist_pt0.json
+judge labels missing for some trials: judge them with --rescore C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist_pt0.json

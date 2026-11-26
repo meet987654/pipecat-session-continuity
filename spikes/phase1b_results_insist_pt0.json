@@ -1,0 +1,574 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "reask": "insist",
+  "turns": 3,
+  "resolver": "none",
+  "first_booking": "committed",
+  "pending_timeout": 0.0,
+  "results": [
+    {
+      "condition": "library",
+      "trial": "0-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "Your booking request was interrupted, so I can\u2019t confirm if it went through. Would you like me to try the same appointment again?",
+        "",
+        "Your cleaning is booked for Thursday at 3\u202fPM. Your confirmation code is\u202fCONF\u2011002.",
+        "",
+        "Your cleaning is confirmed for Thursday at 3\u202fPM. Confirmation code:\u202fCONF\u2011002."
+      ],
+      "closing_utterance": "Your cleaning is confirmed for Thursday at 3\u202fPM. Confirmation code:\u202fCONF\u2011002.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        },
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "Your booking request was interrupted, so I can\u2019t confirm if it went through. Would you like me to try the same appointment again?Your cleaning is booked for Thursday at 3\u202fPM. Your confirmation code is\u202fCONF\u2011002.Your cleaning is confirmed for Thursday at 3\u202fPM. Confirmation code:\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 1,
+      "s2_tool_calls": 2,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 7896,
+      "agent_requests": 12,
+      "attempts": 1,
+      "index": 0
+    },
+    {
+      "condition": "library",
+      "trial": "1-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "I saw the connection dropped while processing your appointment request, so I\u2019m not sure if it went through. Would you like me to try again with the same day, time and name?",
+        "",
+        "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Your confirmation number is\u202fCONF-002.",
+        "Your cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Your confirmation number is\u202fCONF-002."
+      ],
+      "closing_utterance": "Your cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Your confirmation number is\u202fCONF-002.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "I saw the connection dropped while processing your appointment request, so I\u2019m not sure if it went through. Would you like me to try again with the same day, time and name?Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Your confirmation number is\u202fCONF-002.Your cleaning is booked for Thursday at 3\u202fpm, Priya Shah. Your confirmation number is\u202fCONF-002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "s2_tool_calls": 1,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 6236,
+      "agent_requests": 10,
+      "attempts": 1,
+      "index": 1
+    },
+    {
+      "condition": "library",
+      "trial": "2-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "I see the connection dropped while processing your appointment request, so I can\u2019t confirm if it went through. Would you like me to try again with the same details?",
+        "",
+        "Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation code is\u202fCONF\u2011002.",
+        "Your teeth cleaning is confirmed for Thursday at 3\u202fPM, Priya Shah. Confirmation code:\u202fCONF\u2011002."
+      ],
+      "closing_utterance": "Your teeth cleaning is confirmed for Thursday at 3\u202fPM, Priya Shah. Confirmation code:\u202fCONF\u2011002.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "I see the connection dropped while processing your appointment request, so I can\u2019t confirm if it went through. Would you like me to try again with the same details?Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation code is\u202fCONF\u2011002.Your teeth cleaning is confirmed for Thursday at 3\u202fPM, Priya Shah. Confirmation code:\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "s2_tool_calls": 1,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 6042,
+      "agent_requests": 10,
+      "attempts": 1,
+      "index": 2
+    },
+    {
+      "condition": "library",
+      "trial": "3-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "I\u2019m sorry\u2014the booking request was interrupted by a disconnect, so I can\u2019t confirm if it went through. Would you like me to try the same appointment again for Priya\u202fShah on Thursday at 3\u202fpm?",
+        "I\u2019m sorry\u2014the booking request was interrupted, so I can\u2019t confirm if it went through. Would you like me to try the same appointment again for Priya\u202fShah on Thursday at 3\u202fpm?",
+        "",
+        "Your teeth\u2011cleaning appointment is booked for Thursday at 3\u202fpm, Priya\u202fShah. Confirmation: **CONF-002**."
+      ],
+      "closing_utterance": "Your teeth\u2011cleaning appointment is booked for Thursday at 3\u202fpm, Priya\u202fShah. Confirmation: **CONF-002**.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted by a disconnect, so I can\u2019t confirm if it went through. Would you like me to try the same appointment again for Priya\u202fShah on Thursday at 3\u202fpm?I\u2019m sorry\u2014the booking request was interrupted, so I can\u2019t confirm if it went through. Would you like me to try the same appointment again for Priya\u202fShah on Thursday at 3\u202fpm?Your teeth\u2011cleaning appointment is booked for Thursday at 3\u202fpm, Priya\u202fShah. Confirmation: **CONF-002**.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "s2_tool_calls": 1,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 6480,
+      "agent_requests": 10,
+      "attempts": 1,
+      "index": 3
+    },
+    {
+      "condition": "library",
+      "trial": "4-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "I\u2019m sorry\u2014the booking request was interrupted by a disconnect, so I can\u2019t confirm if it went through. Would you like me to try the same appointment again for Thursday at 3\u202fp.m., Priya Shah?",
+        "",
+        "Your teeth\u2011cleaning appointment is booked for Thursday at 3\u202fp.m., Priya Shah. The confirmation code is **CONF\u2011002**.",
+        "Your appointment is already booked for Thursday at 3\u202fp.m., Priya Shah\u2014your confirmation code is **CONF\u2011002**."
+      ],
+      "closing_utterance": "Your appointment is already booked for Thursday at 3\u202fp.m., Priya Shah\u2014your confirmation code is **CONF\u2011002**.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted by a disconnect, so I can\u2019t confirm if it went through. Would you like me to try the same appointment again for Thursday at 3\u202fp.m., Priya Shah?Your teeth\u2011cleaning appointment is booked for Thursday at 3\u202fp.m., Priya Shah. The confirmation code is **CONF\u2011002**.Your appointment is already booked for Thursday at 3\u202fp.m., Priya Shah\u2014your confirmation code is **CONF\u2011002**.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "s2_tool_calls": 1,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 6328,
+      "agent_requests": 10,
+      "attempts": 1,
+      "index": 4
+    },
+    {
+      "condition": "library",
+      "trial": "5-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "I\u2019m sorry\u2014the booking request was interrupted, so I can\u2019t confirm if it went through. Would you like me to try the same Thursday\u202f3\u202fp.m. appointment for Priya Shah again?",
+        "",
+        "Your Thursday 3\u202fp.m. cleaning for Priya Shah is booked. Your confirmation number is\u202fCONF\u2011002.",
+        "",
+        "",
+        "Your Thursday\u202f3\u202fp.m. cleaning for Priya Shah is booked\u2014confirmation\u202fCONF\u2011002."
+      ],
+      "closing_utterance": "Your Thursday\u202f3\u202fp.m. cleaning for Priya Shah is booked\u2014confirmation\u202fCONF\u2011002.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        },
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        },
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted, so I can\u2019t confirm if it went through. Would you like me to try the same Thursday\u202f3\u202fp.m. appointment for Priya Shah again?Your Thursday 3\u202fp.m. cleaning for Priya Shah is booked. Your confirmation number is\u202fCONF\u2011002.Your Thursday\u202f3\u202fp.m. cleaning for Priya Shah is booked\u2014confirmation\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 2,
+      "s2_tool_calls": 3,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 9844,
+      "agent_requests": 14,
+      "attempts": 1,
+      "index": 5
+    },
+    {
+      "condition": "library",
+      "trial": "6-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "Your booking request was interrupted, so I can\u2019t confirm if it went through. Would you like me to try the same Thursday\u202f3\u202fp.m. appointment for Priya Shah again?",
+        "",
+        "Your teeth cleaning is booked for Thursday at 3\u202fp.m., Priya Shah. Your confirmation code is\u202fCONF-002.",
+        "",
+        "",
+        "Your teeth cleaning is confirmed for Thursday at 3\u202fp.m., Priya Shah. Confirmation code\u202fCONF-002."
+      ],
+      "closing_utterance": "Your teeth cleaning is confirmed for Thursday at 3\u202fp.m., Priya Shah. Confirmation code\u202fCONF-002.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        },
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        },
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "Your booking request was interrupted, so I can\u2019t confirm if it went through. Would you like me to try the same Thursday\u202f3\u202fp.m. appointment for Priya Shah again?Your teeth cleaning is booked for Thursday at 3\u202fp.m., Priya Shah. Your confirmation code is\u202fCONF-002.Your teeth cleaning is confirmed for Thursday at 3\u202fp.m., Priya Shah. Confirmation code\u202fCONF-002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 2,
+      "s2_tool_calls": 3,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 9694,
+      "agent_requests": 14,
+      "attempts": 1,
+      "index": 6
+    },
+    {
+      "condition": "library",
+      "trial": "7-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "I\u2019m sorry\u2014the booking request was interrupted and I can\u2019t confirm if it went through. Would you like me to try again with the same details?",
+        "",
+        "Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation number is\u202fCONF\u2011002.",
+        "Your cleaning is confirmed for Thursday at 3\u202fPM, Priya Shah. Confirmation:\u202fCONF\u2011002."
+      ],
+      "closing_utterance": "Your cleaning is confirmed for Thursday at 3\u202fPM, Priya Shah. Confirmation:\u202fCONF\u2011002.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted and I can\u2019t confirm if it went through. Would you like me to try again with the same details?Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Your confirmation number is\u202fCONF\u2011002.Your cleaning is confirmed for Thursday at 3\u202fPM, Priya Shah. Confirmation:\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "s2_tool_calls": 1,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 5994,
+      "agent_requests": 10,
+      "attempts": 1,
+      "index": 7
+    },
+    {
+      "condition": "library",
+      "trial": "8-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "I\u2019m sorry\u2014the booking request was interrupted, so I can\u2019t confirm if it went through. Would you like me to try the same appointment again?",
+        "",
+        "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya. Your confirmation number is\u202fCONF\u2011002.",
+        "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya. Your confirmation number is\u202fCONF\u2011002."
+      ],
+      "closing_utterance": "Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya. Your confirmation number is\u202fCONF\u2011002.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted, so I can\u2019t confirm if it went through. Would you like me to try the same appointment again?Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya. Your confirmation number is\u202fCONF\u2011002.Your teeth cleaning is booked for Thursday at 3\u202fpm, Priya. Your confirmation number is\u202fCONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "s2_tool_calls": 1,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 6238,
+      "agent_requests": 10,
+      "attempts": 1,
+      "index": 8
+    },
+    {
+      "condition": "library",
+      "trial": "9-1",
+      "valid": true,
+      "resolver": "none",
+      "first_booking": "committed",
+      "pending_timeout": 0.0,
+      "snapshot_has_in_progress_tool": true,
+      "resumed": true,
+      "resume_statuses": [
+        "unresolved"
+      ],
+      "turns": 3,
+      "s2_responses": [
+        "I\u2019m sorry\u2014the booking request was interrupted and I can\u2019t confirm if it went through. Would you like me to try the same appointment again?",
+        "",
+        "Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Confirmation: CONF\u2011002.",
+        "Your cleaning is confirmed for Thursday at 3\u202fPM, Priya Shah. Confirmation number: CONF\u2011002."
+      ],
+      "closing_utterance": "Your cleaning is confirmed for Thursday at 3\u202fPM, Priya Shah. Confirmation number: CONF\u2011002.",
+      "tool_results_returned": [
+        {
+          "status": "booked",
+          "confirmation": "CONF-002"
+        }
+      ],
+      "booked_result_seen": true,
+      "s2_text": "I\u2019m sorry\u2014the booking request was interrupted and I can\u2019t confirm if it went through. Would you like me to try the same appointment again?Your teeth cleaning is booked for Thursday at 3\u202fPM, Priya Shah. Confirmation: CONF\u2011002.Your cleaning is confirmed for Thursday at 3\u202fPM, Priya Shah. Confirmation number: CONF\u2011002.",
+      "ledger": [
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        },
+        {
+          "patient_name": "Priya Shah",
+          "day": "Thursday",
+          "slot_time": "15:00"
+        }
+      ],
+      "max_bookings_same_slot": 2,
+      "duplicate": true,
+      "guard_suppressed": 0,
+      "s2_tool_calls": 1,
+      "resolver_answers": [],
+      "booking_made": true,
+      "other_slot_booked": false,
+      "permitted_retries": 1,
+      "agent_tokens": 6276,
+      "agent_requests": 10,
+      "attempts": 1,
+      "index": 9
+    }
+  ],
+  "infra_events": [
+    {
+      "condition": "library",
+      "index": 10,
+      "t": 1795689115.144507,
+      "retry_after_s": 127.872,
+      "detail": "Error during completion: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199521, Requested 775. Please try again in 2m7.872s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_e"
+    }
+  ]
+}
