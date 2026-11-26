@@ -2,8 +2,9 @@
 
 Throwaway spike, `spikes/phase1_duplicate_on_reconnect.py --conditions library --turns 3`.
 Model `openai/gpt-oss-120b` on Groq, all arms. 95% Wilson intervals. The `run_llm` bug in
-`resume_or_start` is left unfixed in every arm. In every trial so far the first booking
-**committed** before the drop (`--first-booking committed`), so the ledger truth is always "booked".
+`resume_or_start` is left unfixed in every arm. Unless a section says otherwise, the first booking
+**committed** before the drop (`--first-booking committed`), so the ledger truth is "booked". The
+not-committed arms are in "Drop before commit" below.
 
 ## Headline: the `unknown` notice switches off the retry, and with it the guard
 
@@ -114,6 +115,35 @@ says it "can't retry that identical request" and asks for a different time. That
 the library's own "do not call this tool again" notice. Cost: ~6,350 tokens per trial (agent + judges), not the
 3,500 the budget gate assumed, so one day's 200k cap fits about 30 trials.
 
+### Not committed, n=20 each: both fixes remove the loss
+
+Insist script, `--first-booking not_committed`, so the ledger truth is "not booked" until a retry succeeds.
+All trials valid; all judged (`--rescore`).
+
+| Arm | n | Loss | Duplicates | Permitted retry | Guard engaged | Other slot | Steers | False claim |
+|---|---|---|---|---|---|---|---|---|
+| baseline (no resolver, no timeout) | 5 | **5/5 (0.57-1.00)** | 0/5 | 0/5 | 3/5 | 0/5 | see above | not judged |
+| `--resolver not_committed` (lookup 404) | 20 | **0/20 (0.00-0.16)** | 0/20 (0.00-0.16) | 20/20 | 0/20 | 0/20 | 0/20 (0.00-0.16) | 0/20 (0.00-0.16) |
+| `--pending-timeout 0` (no resolver: `UNRESOLVED`) | 20 | **0/20 (0.00-0.16)** | 0/20 (0.00-0.16) | 20/20 | 1/20 | 0/20 | 0/20 (0.00-0.16) | 0/20 (0.00-0.16) |
+
+Files: `phase1b_results_insist_not_committed_nc.json`, `phase1b_results_insist_pt0_nc.json`.
+
+- Loss goes from 5/5 to 0/20 in both arms; the intervals do not overlap (0.57-1.00 vs 0.00-0.16).
+- **Resolver arm:** the status check answered `not_found` in 20/20, the agent used the one permitted retry,
+  booked once, and closed with the real confirmation code (judge: `SAYS_BOOKED` 20/20, all backed by a tool result).
+- **Timeout arm:** in 20/20 the first reply after resume says the outcome is unknown and asks whether to try the
+  *same* appointment again, which is what the `UNRESOLVED` notice asks for. No trial steered to another slot (baseline:
+  4 of 5 offered the same slot but the guard would block it; 1 asked for a different time). In trial 0 the agent called
+  the tool a second time after the permitted retry had booked; the guard blocked it, so still one booking.
+- The guard is not tested by the resolver arm (it never engaged); the one engagement in the timeout arm is the
+  only evidence that the "one identical retry, then block" rule holds live. The deterministic tests cover it.
+- Caveats: one model, one caller script (insist), one scenario. The baseline is n=5. ask_status was not run for
+  these arms. Judge = same model at temperature 0, no second rater on these 40 (every closing quotes `CONF-001`
+  after a real booking result, so the labels are not borderline).
+
+Runner bug found before this run: `main()` parsed `--pending-timeout` but did not pass it to `run_trial`, so the
+timeout arm would have run as the baseline under the `_pt0` file name. Fixed in b76b3e5 before any `_pt0` trial.
+
 ## Open scope question: re-booking with different arguments
 
 A second booking with different arguments (another slot, a differently spelled name) gets a new idempotency key,
@@ -121,18 +151,17 @@ so the guard cannot catch it; steering (above) produces exactly that. Is that th
 example, a per-session "one booking of this kind" intent key) or the agent prompt's? Left open until the loss
 question is answered. No steering fix has been attempted.
 
-## Not run yet (Groq free tier: 200k tokens/day)
+## Run log (Groq free tier: 200k tokens/day)
 
 Trials now record utterances only; judging is deferred to `--rescore` so the agent trials get the window
 (`--judge-during-run` restores the old behaviour). Agent-only cost is about 5,300 tokens a trial (the judges were ~1,050 of the 6,350), so deferring buys ~16%: about 37 trials per 200k window instead of ~31. Order for the next
 token window:
 
 1. ~~The three steering rescores~~ done: judge agrees with the rater on 78/78 (table above).
-2. `--first-booking not_committed --resolver not_committed`, insist, **n=20**: lookup 404, one permitted retry.
-3. `--first-booking not_committed --pending-timeout 0`, insist, n=20: the fix with no resolver (`UNRESOLVED`, ask the
-   caller). Timeout 0 means any record still pending at resume is past it; in the spike the drop is the only reason a
-   record is pending.
-4. Judge the new files with `--rescore`, on leftover budget.
+2. ~~`--first-booking not_committed --resolver not_committed`, insist, n=20~~ done (2026-11-26): loss 0/20.
+3. ~~`--first-booking not_committed --pending-timeout 0`, insist, n=20~~ done (2026-11-26): loss 0/20. Timeout 0
+   means any record still pending at resume is past it; in the spike the drop is the only reason a record is pending.
+4. ~~Judge the new files with `--rescore`~~ done: 40/40 judged.
 
 Deferred: finishing the not-committed baseline at n=8 (5/5 lost already, and the tests make it deterministic),
 ask_status for the new arms, `unknown` × not_committed, and the `committed` arm. The first attempt's 4 valid

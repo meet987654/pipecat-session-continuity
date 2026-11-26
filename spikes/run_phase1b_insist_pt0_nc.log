@@ -1,0 +1,114 @@
+[32m2026-11-26 15:44:49.011[0m | [1mINFO    [0m | [36mpipecat[0m:[36m<module>[0m:[36m54[0m - [1m\u14da\u160f\u15e2 Pipecat 1.5.0 (Python 3.13.7 (main, Sep 18 2025, 19:43:45) [MSC v.1944 64 bit (AMD64)]) \u14da\u160f\u15e2[0m
+C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1_duplicate_on_reconnect.py:295: DeprecationWarning: `PipelineTask` is deprecated since 1.3.0 and will be removed in 2.0.0. Use `PipelineWorker` instead.
+  self.task = PipelineTask(pipeline, params=PipelineParams(enable_metrics=True, enable_usage_metrics=True),
+C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1_duplicate_on_reconnect.py:297: DeprecationWarning: `PipelineRunner` is deprecated since 1.3.0 and will be removed in 2.0.0. Use `WorkerRunner` instead.
+  self.runner = PipelineRunner(handle_sigint=False, check_dangling_tasks=False)
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+budget: 14 trials x ~5,344 tokens = ~74,813 tokens (daily cap 200,000); ~138 requests (daily cap 1,000). Per-trial cost from 25 recorded trials (agent only).
+         Groq reports 898 requests left today. Tokens left today is not reported until a 429.
+library  trial  0: ok   bookings=1  guard=1  judge=None  kind=None  mention=None  tokens=7902  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  1: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6000  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  2: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6132  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  3: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6186  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  4: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5960  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  5: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6138  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  6: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6090  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  7: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5924  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  8: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5996  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial  9: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6374  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial 10: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6234  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial 11: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6286  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial 12: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5966  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial 13: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6056  
+
+model=openai/gpt-oss-120b  reask=insist  turns=3  resolver=none  pending_timeout=0.0
+
+library: 14 valid, 0 invalid  (14 not judged yet: judge-based rows below undercount; run --rescore)
+  duplicate        0/14  0.00-0.22
+  attempted       14/14  0.78-1.00
+  guard engaged    1/14  0.01-0.31
+  loss             0/14  0.00-0.22
+  other slot booked  0/14  0.00-0.22
+  permitted retry 14/14  0.78-1.00
+  steers (judge)   0/14  0.00-0.22
+  false claim      0/14  0.00-0.22
+    fab. success   0/14  0.00-0.22
+    fab. failure   0/14  0.00-0.22
+  duplicates among trials that re-attempted: 0/14  (blocked: 1/14); never attempted: 0
+  judge labels    {None: 14}
+
+per-trial detail: C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist_pt0_nc.json
+judge labels missing for some trials: judge them with --rescore C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist_pt0_nc.json
+[32m2026-11-26 15:53:19.652[0m | [1mINFO    [0m | [36mpipecat[0m:[36m<module>[0m:[36m54[0m - [1m\u14da\u160f\u15e2 Pipecat 1.5.0 (Python 3.13.7 (main, Sep 18 2025, 19:43:45) [MSC v.1944 64 bit (AMD64)]) \u14da\u160f\u15e2[0m
+C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1_duplicate_on_reconnect.py:295: DeprecationWarning: `PipelineTask` is deprecated since 1.3.0 and will be removed in 2.0.0. Use `PipelineWorker` instead.
+  self.task = PipelineTask(pipeline, params=PipelineParams(enable_metrics=True, enable_usage_metrics=True),
+C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1_duplicate_on_reconnect.py:297: DeprecationWarning: `PipelineRunner` is deprecated since 1.3.0 and will be removed in 2.0.0. Use `WorkerRunner` instead.
+  self.runner = PipelineRunner(handle_sigint=False, check_dangling_tasks=False)
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+resuming C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist_pt0_nc.json: 14 trials already recorded
+budget: 6 trials x ~5,663 tokens = ~33,975 tokens (daily cap 200,000); ~60 requests (daily cap 1,000). Per-trial cost from 39 recorded trials (agent only).
+         Groq reports 724 requests left today. Tokens left today is not reported until a 429.
+library  trial 14: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6004  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial 15: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6224  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial 16: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5970  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial 17: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6062  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial 18: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6154  
+Tool 'book_appointment' is guarded but has no status check. After its 0s pending timeout, an interrupted call becomes the caller's decision to retry; if the original did go through and the backend ignores idempotency keys, that retry can duplicate it. Register a status check (register_status_check) to avoid guessing.
+Pending 'book_appointment' (idemp:det:book_appointment:f0f6bbea594cd730) passed its 0s pending timeout unresolved (no_status_check); asking the caller.
+library  trial 19: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=6186  
+
+model=openai/gpt-oss-120b  reask=insist  turns=3  resolver=none  pending_timeout=0.0
+
+library: 20 valid, 0 invalid  (6 not judged yet: judge-based rows below undercount; run --rescore)
+  duplicate        0/20  0.00-0.16
+  attempted       20/20  0.84-1.00
+  guard engaged    1/20  0.01-0.24
+  loss             0/20  0.00-0.16
+  other slot booked  0/20  0.00-0.16
+  permitted retry 20/20  0.84-1.00
+  steers (judge)   0/20  0.00-0.16
+  false claim      0/20  0.00-0.16
+    fab. success   0/20  0.00-0.16
+    fab. failure   0/20  0.00-0.16
+  duplicates among trials that re-attempted: 0/20  (blocked: 1/20); never attempted: 0
+  first reply mentions booking 14/14  0.78-1.00
+  judge labels    {'SAYS_BOOKED': 14, None: 6}
+
+per-trial detail: C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist_pt0_nc.json
+judge labels missing for some trials: judge them with --rescore C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist_pt0_nc.json

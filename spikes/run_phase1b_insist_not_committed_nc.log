@@ -1,0 +1,48 @@
+[32m2026-11-26 15:39:34.112[0m | [1mINFO    [0m | [36mpipecat[0m:[36m<module>[0m:[36m54[0m - [1m\u14da\u160f\u15e2 Pipecat 1.5.0 (Python 3.13.7 (main, Sep 18 2025, 19:43:45) [MSC v.1944 64 bit (AMD64)]) \u14da\u160f\u15e2[0m
+C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1_duplicate_on_reconnect.py:295: DeprecationWarning: `PipelineTask` is deprecated since 1.3.0 and will be removed in 2.0.0. Use `PipelineWorker` instead.
+  self.task = PipelineTask(pipeline, params=PipelineParams(enable_metrics=True, enable_usage_metrics=True),
+C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1_duplicate_on_reconnect.py:297: DeprecationWarning: `PipelineRunner` is deprecated since 1.3.0 and will be removed in 2.0.0. Use `WorkerRunner` instead.
+  self.runner = PipelineRunner(handle_sigint=False, check_dangling_tasks=False)
+resuming C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist_not_committed_nc.json: 0 trials already recorded
+budget: 20 trials x ~5,311 tokens = ~106,224 tokens (daily cap 200,000); ~184 requests (daily cap 1,000). Per-trial cost from 5 recorded trials (agent only).
+         Groq reports 999 requests left today. Tokens left today is not reported until a 429.
+library  trial  0: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5294  
+library  trial  1: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5326  
+library  trial  2: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5310  
+library  trial  3: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5320  
+library  trial  4: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5420  
+library  trial  5: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5542  
+library  trial  6: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5454  
+library  trial  7: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5266  
+library  trial  8: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5454  
+library  trial  9: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5298  
+library  trial 10: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5266  
+library  trial 11: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5308  
+library  trial 12: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5294  
+library  trial 13: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5402  
+library  trial 14: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5292  
+library  trial 15: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5310  
+library  trial 16: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5310  
+library  trial 17: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5522  
+library  trial 18: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5370  
+library  trial 19: ok   bookings=1  guard=0  judge=None  kind=None  mention=None  tokens=5280  
+
+model=openai/gpt-oss-120b  reask=insist  turns=3  resolver=not_committed  pending_timeout=None
+
+library: 20 valid, 0 invalid  (20 not judged yet: judge-based rows below undercount; run --rescore)
+  duplicate        0/20  0.00-0.16
+  attempted       20/20  0.84-1.00
+  guard engaged    0/20  0.00-0.16
+  loss             0/20  0.00-0.16
+  other slot booked  0/20  0.00-0.16
+  permitted retry 20/20  0.84-1.00
+  steers (judge)   0/20  0.00-0.16
+  false claim      0/20  0.00-0.16
+    fab. success   0/20  0.00-0.16
+    fab. failure   0/20  0.00-0.16
+  duplicates among trials that re-attempted: 0/20  (blocked: 0/20); never attempted: 0
+  judge labels    {None: 20}
+  ** guard never engaged: the duplicate result says nothing about the guard **
+
+per-trial detail: C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist_not_committed_nc.json
+judge labels missing for some trials: judge them with --rescore C:\Users\meetp\OneDrive\Desktop\Projects\Session Continuity for Voice Agents\spikes\phase1b_results_insist_not_committed_nc.json
