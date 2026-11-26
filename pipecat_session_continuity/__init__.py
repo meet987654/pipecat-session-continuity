@@ -1,6 +1,6 @@
 from .manager import SessionContinuityManager
 from .security import generate_session_token, verify_session_token
-from .storage.base import BaseStorage
+from .storage.base import BaseStorage, StorageUnavailableError
 from .storage.redis_storage import RedisStorage
 from .storage.sqlite_storage import SQLiteStorage
 from .idempotency import (
@@ -30,6 +30,7 @@ __all__ = [
     "SessionContinuityManager",
     "SessionContinuityProcessor",
     "BaseStorage",
+    "StorageUnavailableError",
     "RedisStorage",
     "SQLiteStorage",
     "IdempotencyRegistry",
@@ -66,7 +67,15 @@ class SessionContinuity:
         enable_prometheus: bool = False,
         enable_opentelemetry: bool = False,
         metrics_exporter: Optional[BaseMetricsExporter] = None,
+        allow_memory_fallback: bool = False,
     ):
+        """
+        Storage fails closed: if the session store cannot be read, resume_or_start raises
+        StorageUnavailableError instead of silently starting a fresh call (which would drop the
+        idempotency records that block duplicate tool calls). allow_memory_fallback=True lets
+        RedisStorage fall back to in-process memory when Redis is unreachable at startup;
+        development and tests only.
+        """
         if metrics_exporter is not None:
             active_exporter = metrics_exporter
         else:
@@ -88,6 +97,7 @@ class SessionContinuity:
             db_path=db_path,
             ttl_seconds=ttl_seconds,
             metrics_exporter=active_exporter,
+            allow_memory_fallback=allow_memory_fallback,
         )
         self.metrics = self.manager.metrics
         self.secret = secret

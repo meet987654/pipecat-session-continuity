@@ -47,10 +47,10 @@ async def test_custom_sqlite_db_path():
 @pytest.mark.asyncio
 async def test_redis_url_explicit_override():
     """Verify that passing redis_url uses RedisStorage instead of the default SQLite."""
-    manager = SessionContinuityManager(redis_url="redis://invalid-test-host:6379")
+    manager = SessionContinuityManager(redis_url="redis://invalid-test-host:6379", allow_memory_fallback=True)
     assert isinstance(manager.storage, RedisStorage)
 
-    continuity = SessionContinuity(redis_url="redis://invalid-test-host:6379")
+    continuity = SessionContinuity(redis_url="redis://invalid-test-host:6379", allow_memory_fallback=True)
     assert isinstance(continuity.manager.storage, RedisStorage)
 
 

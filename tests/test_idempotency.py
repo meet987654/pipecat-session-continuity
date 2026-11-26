@@ -42,7 +42,7 @@ class MockPipelineTask:
 @pytest.mark.asyncio
 async def test_idempotency():
     redis_url = os.getenv("REDIS_URL", "redis://invalid-host-so-it-falls-back:6379")
-    continuity = SessionContinuity(redis_url=redis_url, ttl_seconds=60)
+    continuity = SessionContinuity(redis_url=redis_url, ttl_seconds=60, allow_memory_fallback=True)
     manager = continuity.manager
     session_id = "test_idempotency_real_race"
 
